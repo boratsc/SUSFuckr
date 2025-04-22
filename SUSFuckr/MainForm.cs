@@ -31,50 +31,75 @@ namespace SUSFuckr
             Text = "SUSFuckr";
             Width = 620;
             Height = 440;
-            // Za³aduj istniej¹c¹ konfiguracjê
             modConfigs = ConfigManager.LoadConfig();
             Load += FormLoad; // Dodaj wydarzenie ³adowania formularza
         }
+
         private void FormLoad(object? sender, EventArgs e)
         {
-            var path = GameLocator.TryFindAmongUsPath();
-            var version = path != null ? GetGameVersion(path) : "Nieznana";
-
-            if (path != null)
+            // Najpierw pobierz informacje z konfiguracji
+            var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
+            if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath))
             {
-                textBoxPath.Text = path.Replace('/', '\\');
-                DisplayGameVersion(path);
+                textBoxPath.Text = vanillaMod.InstallPath.Replace('/', '\\');
+                labelVersion.Text = "Wersja gry: " + vanillaMod.AmongVersion;
+            }
+            else
+            {
+                // Dopiero potem poszukaj gry
+                var path = GameLocator.TryFindAmongUsPath();
+                var version = path != null ? GetGameVersion(path) : "Nieznana";
+
+                if (path != null)
+                {
+                    textBoxPath.Text = path.Replace('/', '\\');
+                    labelVersion.Text = "Wersja gry: " + version;
+                }
+                else
+                {
+                    textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
+                    labelVersion.Text = "Wersja gry: Nieznana";
+                }
+
+                // Aktualizuj lub dodaj Vanilla jeœli nie ma
+                if (vanillaMod == null)
+                {
+                    vanillaMod = new ModConfiguration
+                    {
+                        ModName = "AmongUs",
+                        PngFileName = "Vanilla.png",
+                        InstallPath = path ?? string.Empty,
+                        GitHubRepoOrLink = null,
+                        ModType = "Vanilla",
+                        DllInstallPath = null,
+                        LastUpdated = null,
+                        AmongVersion = version,
+                    };
+                    modConfigs.Add(vanillaMod);
+                    ConfigManager.SaveConfig(modConfigs);
+                }
+            }
+
+            // Wyœwietl 'Vanilla' jako pierwsza
+            if (vanillaMod != null)
+            {
+                AddGameIcon(vanillaMod);
+            }
+            ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
+        }
+
+        private void UpdateFormDisplay(ModConfiguration config)
+        {
+            if (config != null)
+            {
+                textBoxPath.Text = config.InstallPath.Replace('/', '\\');
+                labelVersion.Text = "Wersja gry: " + config.AmongVersion;
             }
             else
             {
                 textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
                 labelVersion.Text = "Wersja gry: Nieznana";
             }
-
-            var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
-            if (vanillaMod == null || string.IsNullOrEmpty(vanillaMod.InstallPath))
-            {
-                vanillaMod = new ModConfiguration
-                {
-                    ModName = "AmongUs",
-                    PngFileName = "Vanilla.png",
-                    InstallPath = path ?? string.Empty,
-                    GitHubRepoOrLink = null,
-                    ModType = "Vanilla",
-                    DllInstallPath = null,
-                    LastUpdated = null,
-                    AmongVersion = version,
-                };
-                modConfigs.Add(vanillaMod);
-                ConfigManager.SaveConfig(modConfigs);
-            }
-
-            // Wyœwietl "Vanilla" jako pierwsza
-            if (vanillaMod != null)
-            {
-                AddGameIcon(vanillaMod);
-            }
-            ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
         }
 
         private PictureBox selectedIcon = null; // Przechowuje aktualnie wybran¹ ikonê
@@ -94,8 +119,16 @@ namespace SUSFuckr
                     var imageFile = Path.Combine("Graphics", config.PngFileName);
                     if (!File.Exists(imageFile))
                     {
+                        // Jeœli plik ikony z konfiguracji nie istnieje, u¿yj "Vanilla.png"
                         Console.WriteLine($"Pomijanie grafiki: {config.PngFileName} poniewa¿ plik nie istnieje.");
-                        continue;
+                        imageFile = Path.Combine("Graphics", "Vanilla.png");
+
+                        // Wywal komunikat jeœli "Vanilla.png" równie¿ nie istnieje
+                        if (!File.Exists(imageFile))
+                        {
+                            MessageBox.Show("Nie znaleziono domyœlnego pliku graficznego: Vanilla.png", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            continue; // Przeskocz ten mod w takim przypadku
+                        }
                     }
 
                     Console.WriteLine($"Dodaj ikonê dla: {config.ModName}, PngFileName: {config.PngFileName}");
@@ -124,7 +157,6 @@ namespace SUSFuckr
                         TextAlign = ContentAlignment.TopCenter
                     };
                     this.contentPanel.Controls.Add(labelGame);
-
                     initialX += iconWidth + offsetX;
                 }
                 catch (Exception ex)
@@ -133,6 +165,7 @@ namespace SUSFuckr
                 }
             }
         }
+
         private string GetGameVersion(string path)
         {
             try
