@@ -4,31 +4,42 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using System.Collections.Generic;
-
+using System.Drawing.Drawing2D;
 namespace SUSFuckr
 {
     public partial class MainForm : Form
     {
-
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Rectangle bounds = contentPanel.Bounds;
+            using (GraphicsPath path = new GraphicsPath())
+            {
+                path.AddArc(bounds.Left, bounds.Top, 20, 20, 180, 90);
+                path.AddArc(bounds.Right - 20, bounds.Top, 20, 20, 270, 90);
+                path.AddArc(bounds.Right - 20, bounds.Bottom - 20, 20, 20, 0, 90);
+                path.AddArc(bounds.Left, bounds.Bottom - 20, 20, 20, 90, 90);
+                path.CloseFigure();
+                contentPanel.Region = new Region(path);
+            }
+        }
         private List<ModConfiguration> modConfigs;
 
         public MainForm()
         {
             InitializeComponent();
             Text = "SUSFuckr";
-            Width = 600;
-            Height = 400;
-
+            Width = 620;
+            Height = 440;
             // Za³aduj istniej¹c¹ konfiguracjê
             modConfigs = ConfigManager.LoadConfig();
-
             Load += FormLoad; // Dodaj wydarzenie ³adowania formularza
         }
-
         private void FormLoad(object? sender, EventArgs e)
         {
-            // Szukaj niezmodyfikowanej wersji Among Us jeœli nie ma jej w konfiguracji
             var path = GameLocator.TryFindAmongUsPath();
+            var version = path != null ? GetGameVersion(path) : "Nieznana";
+
             if (path != null)
             {
                 textBoxPath.Text = path.Replace('/', '\\');
@@ -40,11 +51,10 @@ namespace SUSFuckr
                 labelVersion.Text = "Wersja gry: Nieznana";
             }
 
-            var version = path != null ? GetGameVersion(path) : "Nieznana";
-            var vanillaMod = modConfigs.FirstOrDefault(x => x.ModType == "Vanilla");
+            var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
             if (vanillaMod == null || string.IsNullOrEmpty(vanillaMod.InstallPath))
             {
-                modConfigs.Add(new ModConfiguration
+                vanillaMod = new ModConfiguration
                 {
                     ModName = "AmongUs",
                     PngFileName = "Vanilla.png",
@@ -54,17 +64,17 @@ namespace SUSFuckr
                     DllInstallPath = null,
                     LastUpdated = null,
                     AmongVersion = version,
-                });
+                };
+                modConfigs.Add(vanillaMod);
                 ConfigManager.SaveConfig(modConfigs);
             }
 
-            // Wyœwietl "vanilla" jako pierwsza
-            vanillaMod = modConfigs.FirstOrDefault(x => x.ModType == "Vanilla");
+            // Wyœwietl "Vanilla" jako pierwsza
             if (vanillaMod != null)
             {
                 AddGameIcon(vanillaMod);
             }
-            ConfigureModComponents(modConfigs.Where(x => x != vanillaMod).ToList());
+            ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
         }
 
         private PictureBox selectedIcon = null; // Przechowuje aktualnie wybran¹ ikonê
@@ -74,46 +84,55 @@ namespace SUSFuckr
         {
             int initialX = 94;
             int initialY = 20;
+            int iconWidth = 64;
             int offsetX = 10;
+
             foreach (var config in configs)
             {
                 try
                 {
-                    var imageFile = $"Graphics/{config.PngFileName}";
+                    var imageFile = Path.Combine("Graphics", config.PngFileName);
+                    if (!File.Exists(imageFile))
+                    {
+                        Console.WriteLine($"Pomijanie grafiki: {config.PngFileName} poniewa¿ plik nie istnieje.");
+                        continue;
+                    }
+
+                    Console.WriteLine($"Dodaj ikonê dla: {config.ModName}, PngFileName: {config.PngFileName}");
+
                     var gameIcon = new PictureBox
                     {
                         Location = new Point(initialX, initialY),
                         Name = $"gameIcon_{config.ModName}",
-                        Size = new Size(64, 64),
+                        Size = new Size(iconWidth, iconWidth),
                         SizeMode = PictureBoxSizeMode.StretchImage,
                         Image = Image.FromFile(imageFile),
                         Cursor = Cursors.Hand
                     };
-                    originalImages[gameIcon] = new Bitmap(gameIcon.Image); // Zapisz oryginalny obrazek
+                    originalImages[gameIcon] = new Bitmap(gameIcon.Image);
                     gameIcon.Click += GameIcon_Click;
-                    this.Controls.Add(gameIcon);
+                    this.contentPanel.Controls.Add(gameIcon);
 
                     var labelGame = new Label
                     {
-                        Location = new Point(initialX, initialY + 64),
+                        Location = new Point(initialX, initialY + iconWidth),
                         Name = $"labelGame_{config.ModName}",
-                        Size = new Size(64, 60),
+                        Size = new Size(iconWidth, 60),
                         AutoSize = false,
-                        MaximumSize = new Size(64, 60),
+                        MaximumSize = new Size(iconWidth, 60),
                         Text = config.ModName,
                         TextAlign = ContentAlignment.TopCenter
                     };
-                    this.Controls.Add(labelGame);
+                    this.contentPanel.Controls.Add(labelGame);
+
+                    initialX += iconWidth + offsetX;
                 }
-                catch (FileNotFoundException)
+                catch (Exception ex)
                 {
-                    MessageBox.Show($"Nie znaleziono pliku graficznego: {config.PngFileName}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Problem w czasie ³adowania: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
-                initialX += 64 + offsetX;
             }
         }
-
-
         private string GetGameVersion(string path)
         {
             try
@@ -124,11 +143,10 @@ namespace SUSFuckr
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Nie uda³o siê odczytaæ wersji gry: {ex.Message}");
+                Console.WriteLine("Nie uda³o siê odczytaæ wersji gry: {ex.Message}");
                 return "Nieznana";
             }
         }
-
         private void DisplayGameVersion(string path)
         {
             try
@@ -143,8 +161,6 @@ namespace SUSFuckr
                 labelVersion.Text = "Wersja gry: Nieznana";
             }
         }
-
-
         private void GameIcon_Click(object? sender, EventArgs e)
         {
             var clickedIcon = sender as PictureBox;
@@ -183,7 +199,6 @@ namespace SUSFuckr
                 }
             }
         }
-
         private void LaunchButton_Click(object sender, EventArgs e)
         {
             if (selectedIcon != null)
@@ -221,7 +236,6 @@ namespace SUSFuckr
                 MessageBox.Show("Nie wybrano wersji gry do uruchomienia.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private void BrowseButton_Click(object sender, EventArgs e)
         {
             using var dialog = new FolderBrowserDialog();
@@ -251,12 +265,12 @@ namespace SUSFuckr
                     Name = $"gameIcon_{config.ModName}",
                     Size = new Size(64, 64),
                     SizeMode = PictureBoxSizeMode.StretchImage,
-                    Image = Image.FromFile($"Graphics/{config.PngFileName}"),
+                    Image = Image.FromFile(Path.Combine("Graphics", config.PngFileName)),
                     Cursor = Cursors.Hand
                 };
                 originalImages[gameIcon] = new Bitmap(gameIcon.Image);
                 gameIcon.Click += GameIcon_Click;
-                this.Controls.Add(gameIcon);
+                this.contentPanel.Controls.Add(gameIcon); // Dodaj do panelu
 
                 var labelGame = new Label
                 {
@@ -268,7 +282,7 @@ namespace SUSFuckr
                     Text = config.ModName,
                     TextAlign = ContentAlignment.TopCenter
                 };
-                this.Controls.Add(labelGame);
+                this.contentPanel.Controls.Add(labelGame); // Dodaj do panelu
             }
             catch (FileNotFoundException)
             {

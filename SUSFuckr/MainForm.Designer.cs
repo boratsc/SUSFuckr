@@ -10,6 +10,7 @@
         private System.Windows.Forms.Button btnModify;
         private System.Windows.Forms.Button btnDelete;
         private System.Windows.Forms.Button btnUpdateMod;
+        private System.Windows.Forms.Panel contentPanel;
 
         protected override void Dispose(bool disposing)
         {
@@ -29,6 +30,29 @@
             this.btnModify = new System.Windows.Forms.Button();
             this.btnDelete = new System.Windows.Forms.Button();
             this.btnUpdateMod = new System.Windows.Forms.Button();
+            this.contentPanel = new System.Windows.Forms.Panel();
+
+            // MainForm
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(620, 440);
+            this.BackColor = Color.LightGray; // Tło formularza ustawione na lekko szary
+
+            // contentPanel
+            this.contentPanel.Location = new System.Drawing.Point(7, 7); // Panel o 7px mniejszy niż okno
+            this.contentPanel.Name = "contentPanel";
+            this.contentPanel.Size = new System.Drawing.Size(586, 386); // Przystosowane do formy prostokąta
+            this.contentPanel.BackColor = SystemColors.Control;
+            this.Controls.Add(this.contentPanel);
+
+            // Relokacja kontrolek w contentPanel
+            this.contentPanel.Controls.Add(this.browseButton);
+            this.contentPanel.Controls.Add(this.textBoxPath);
+            this.contentPanel.Controls.Add(this.labelVersion);
+            this.contentPanel.Controls.Add(this.btnLaunch);
+            this.contentPanel.Controls.Add(this.btnModify);
+            this.contentPanel.Controls.Add(this.btnDelete);
+            this.contentPanel.Controls.Add(this.btnUpdateMod);
 
             // Btn Launch
             this.btnLaunch.Location = new System.Drawing.Point(20, 120);
@@ -89,19 +113,6 @@
             this.labelVersion.TabIndex = 2;
             this.labelVersion.Text = "Wersja gry: Nieznana";
 
-            // MainForm
-            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
-            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(600, 400);
-            this.Controls.Add(this.browseButton);
-            this.Controls.Add(this.textBoxPath);
-            this.Controls.Add(this.labelVersion);
-            this.Controls.Add(this.btnLaunch);
-            this.Controls.Add(this.btnModify);
-            this.Controls.Add(this.btnDelete);
-            this.Controls.Add(this.btnUpdateMod);
-            this.Name = "MainForm";
-            this.Text = "SUSFuckr";
             this.ResumeLayout(false);
             this.PerformLayout();
         }
