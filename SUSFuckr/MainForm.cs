@@ -13,7 +13,8 @@ namespace SUSFuckr
             InitializeComponent();
             Text = "SUSFuckr";
             Width = 600;
-            Height = 300; // Zwiêkszona wysokoœæ, aby zmieœciæ dodatkowe elementy
+            Height = 400; // Zwiêkszona wysokoœæ, aby zmieœciæ dodatkowe elementy
+            ModConfiguration loadedConfig = ConfigManager.LoadConfig();
 
             Load += (s, e) =>
             {

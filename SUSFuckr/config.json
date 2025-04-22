@@ -1,0 +1,24 @@
+[
+    {
+        "ModName": "Town Of Us - R",
+        "PngFileName": "ToU.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/eDonnes124/Town-Of-Us-R",
+        "ModType": "full",
+        "DllInstallPath": null,
+        "ModVersion": "5.2.1",
+        "LastUpdated": "2025-02-08",
+        "AmongVersion": "2024-10-29"
+    },
+    {
+        "ModName": "AnotherMod",
+        "PngFileName": "Another.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/example/anothermod",
+        "ModType": "dll",
+        "DllInstallPath": "BepInEx\\plugins",
+        "ModVersion": "1.0.3",
+        "LastUpdated": "2025-01-15",
+        "AmongVersion": "2024-09-15"
+    }
+]
