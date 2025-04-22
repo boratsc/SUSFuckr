@@ -21,7 +21,7 @@ namespace SUSFuckr
                 var path = Path.Combine(basePath, "steamapps", "common", "Among Us");
                 if (Directory.Exists(path) && File.Exists(Path.Combine(path, "Among Us.exe")))
                 {
-                    return path;
+                    return path.Replace("\\\\", "\\").Replace("/", "\\");
                 }
             }
             return null;
