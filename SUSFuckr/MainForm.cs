@@ -204,7 +204,7 @@ namespace SUSFuckr
                 {
                     if (icon != clickedIcon)
                     {
-                        icon.Image = new Bitmap(originalImages[icon]); // Przywróæ oryginalny obrazek
+                        icon.Image = new Bitmap(originalImages[icon]);
                         icon.Refresh();
                     }
                 }
@@ -222,13 +222,14 @@ namespace SUSFuckr
 
                 selectedIcon = clickedIcon; // Aktualizuj obecnie wybran¹ ikonê
 
-                // Pobierz konfiguracjê moda odpowiadaj¹cego za wybran¹ ikonê
+                // Pobierz konfiguracjê moda odpowiadaj¹c¹ za wybran¹ ikonê
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
-
                 if (modConfig != null)
                 {
-                    // Aktywuj przycisk tylko dla typów Full i Vanilla
-                    btnLaunch.Enabled = modConfig.ModType == "full" || modConfig.ModType == "Vanilla";
+                    var modTypeLowerCase = modConfig.ModType.ToLower();
+                    Console.WriteLine($"ModType: {modTypeLowerCase}"); // Logi do weryfikacji
+                    btnLaunch.Enabled = modTypeLowerCase == "full" || modTypeLowerCase == "vanilla";
+                    btnModify.Enabled = modTypeLowerCase == "full" || modTypeLowerCase == "dll";
                 }
             }
         }

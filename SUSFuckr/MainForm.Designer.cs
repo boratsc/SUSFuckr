@@ -70,7 +70,7 @@
             this.btnModify.TabIndex = 5;
             this.btnModify.Text = "Modyfikuj";
             this.btnModify.UseVisualStyleBackColor = true;
-            this.btnModify.Enabled = false;
+            this.btnModify.Enabled = false; // Ustaw na false na starcie
 
             // Btn Delete
             this.btnDelete.Location = new System.Drawing.Point(20, 200);
