@@ -9,26 +9,16 @@ namespace SUSFuckr
 {
     public partial class MainForm : Form
     {
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            Rectangle bounds = contentPanel.Bounds;
-            using (GraphicsPath path = new GraphicsPath())
-            {
-                path.AddArc(bounds.Left, bounds.Top, 20, 20, 180, 90);
-                path.AddArc(bounds.Right - 20, bounds.Top, 20, 20, 270, 90);
-                path.AddArc(bounds.Right - 20, bounds.Bottom - 20, 20, 20, 0, 90);
-                path.AddArc(bounds.Left, bounds.Bottom - 20, 20, 20, 90, 90);
-                path.CloseFigure();
-                contentPanel.Region = new Region(path);
-            }
-        }
+
         private List<ModConfiguration> modConfigs;
         private Label progressLabel;
+        private MenuStrip menuStrip;
 
         public MainForm()
         {
             InitializeComponent();
+            CreateMenu();
+
             Text = "SUSFuckr - przyjazny instalator modów 0.2.5";
             Width = 640;
             Height = 520;
@@ -46,6 +36,35 @@ namespace SUSFuckr
                 Location = new Point(progressBar.Width / 2 - 50, progressBar.Height / 2 - 10),
             };
             progressBar.Controls.Add(progressLabel); // Dodaj progressLabel do paska postêpu
+
+        }
+
+        private void CreateMenu()
+        {
+            // Tworzymy menu g³ówne
+            menuStrip = new MenuStrip();
+
+            // Tworzymy pozycjê g³ówn¹ menu "Dodatkowe akcje"
+            ToolStripMenuItem additionalActionsMenuItem = new ToolStripMenuItem("Narzêdzia");
+
+            // Tworzymy podpozycjê menu "Napraw czarny ekran"
+            ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw czarny ekran");
+            fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
+
+            // Dodajemy podpozycjê do pozycji g³ównej
+            additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
+
+            // Dodajemy pozycjê g³ówn¹ do menuStrip
+            menuStrip.Items.Add(additionalActionsMenuItem);
+
+            // Przypisujemy menuStrip do formularza
+            this.MainMenuStrip = menuStrip;
+            this.Controls.Add(menuStrip); // Dodaj menuStrip do formy
+        }
+
+        private void FixBlackScreenMenuItem_Click(object sender, EventArgs e)
+        {
+            FixBlackScreen.ExecuteFix(); // Wywo³anie funkcji
         }
 
         private void FormLoad(object? sender, EventArgs e)
