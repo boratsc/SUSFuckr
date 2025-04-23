@@ -5,6 +5,8 @@ using System.IO;
 using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Drawing.Drawing2D;
+using Microsoft.Extensions.Configuration;
+
 namespace SUSFuckr
 {
     public partial class MainForm : Form
@@ -15,11 +17,18 @@ namespace SUSFuckr
         private Label progressLabel;
         private MenuStrip menuStrip = new MenuStrip();
         private Panel overlayPanel = new Panel();
+        private readonly IConfiguration Configuration;
 
         public MainForm()
         {
             InitializeComponent();
             CreateMenu();
+            // Za³aduj konfiguracjê
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+            Configuration = builder.Build();
 
             Text = $"SUSFuckr - przyjazny instalator modów {AppVersion}";
             Width = 640;
@@ -48,16 +57,62 @@ namespace SUSFuckr
             ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw czarny ekran");
             fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
             additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
+
+            ToolStripMenuItem updateConfigItem = new ToolStripMenuItem("Aktualizuj konfiguracjê");
+            updateConfigItem.Click += new EventHandler(UpdateConfigMenuItem_Click);
+            additionalActionsMenuItem.DropDownItems.Add(updateConfigItem);
+
             menuStrip.Items.Add(additionalActionsMenuItem);
 
             ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
             menuStrip.Items.Add(infoMenuItem);
+
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
         }
 
-        private void InfoMenuItem_Click(object sender, EventArgs e)
+
+        private async void UpdateConfigMenuItem_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                // Œci¹ganie nowego pliku konfiguracji
+                var tempFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.temp.json");
+                using (HttpClient client = new HttpClient())
+                {
+                    HttpResponseMessage response = await client.GetAsync(Configuration["Configuration:UpdateServerUrl"]);
+                    response.EnsureSuccessStatusCode();
+                    using (FileStream fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
+                    {
+                        await response.Content.CopyToAsync(fs);
+                    }
+                }
+
+                ConfigUpdater.CompareAndMergeConfigurations(tempFilePath);
+                File.Delete(tempFilePath);
+
+                MessageBox.Show("Konfiguracja zosta³a zaktualizowana. Aplikacja zostanie teraz ponownie uruchomiona.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Zamknij i otwórz aplikacjê ponownie
+                RestartApplication();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"B³¹d podczas aktualizacji konfiguracji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void RestartApplication()
+        {
+            var exePath = Application.ExecutablePath;
+            Process.Start(exePath);
+            Application.Exit();
+        }
+
+
+
+        private void InfoMenuItem_Click(object? sender, EventArgs e)
         {
             ShowInfoOverlay();
         }
@@ -79,7 +134,7 @@ namespace SUSFuckr
             }
         }
 
-        private void FixBlackScreenMenuItem_Click(object sender, EventArgs e)
+        private void FixBlackScreenMenuItem_Click(object? sender, EventArgs e)
         {
             FixBlackScreen.ExecuteFix();
         }
