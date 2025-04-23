@@ -270,6 +270,35 @@ namespace SUSFuckr
                 MessageBox.Show("Nie wybrano wersji gry do uruchomienia.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+        private async void ModifyButton_Click(object sender, EventArgs e)
+        {
+            if (selectedIcon != null)
+            {
+                var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
+
+                if (modConfig != null)
+                {
+                    progressBar.Visible = true;
+                    progressBar.Style = ProgressBarStyle.Marquee;
+                    progressBar.MarqueeAnimationSpeed = 30;
+
+                    ModManager manager = new ModManager();
+                    await manager.ModifyAsync(modConfig, modConfigs); // U¿ycie metody asynchronicznej
+
+                    progressBar.Visible = false; // Ukryj pasek po zakoñczeniu
+                }
+                else
+                {
+                    MessageBox.Show("Nie mo¿na znaleŸæ konfiguracji dla wybranego moda.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Nie wybrano ¿adnej ikony do modyfikacji.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         private void BrowseButton_Click(object sender, EventArgs e)
         {
             using var dialog = new FolderBrowserDialog();

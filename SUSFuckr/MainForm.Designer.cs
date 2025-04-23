@@ -11,6 +11,7 @@
         private System.Windows.Forms.Button btnDelete;
         private System.Windows.Forms.Button btnUpdateMod;
         private System.Windows.Forms.Panel contentPanel;
+        private System.Windows.Forms.ProgressBar progressBar; // Dodaj kontrolkę ProgressBar
 
         protected override void Dispose(bool disposing)
         {
@@ -31,17 +32,18 @@
             this.btnDelete = new System.Windows.Forms.Button();
             this.btnUpdateMod = new System.Windows.Forms.Button();
             this.contentPanel = new System.Windows.Forms.Panel();
+            this.progressBar = new System.Windows.Forms.ProgressBar(); // Inicjalizacja ProgressBar
 
             // MainForm
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(620, 440);
-            this.BackColor = Color.LightGray; // Tło formularza ustawione na lekko szary
+            this.ClientSize = new System.Drawing.Size(620, 480); // Zwiększona wysokość dla paska
+            this.BackColor = Color.LightGray;
 
             // contentPanel
             this.contentPanel.Location = new System.Drawing.Point(7, 7); // Panel o 7px mniejszy niż okno
             this.contentPanel.Name = "contentPanel";
-            this.contentPanel.Size = new System.Drawing.Size(586, 386); // Przystosowane do formy prostokąta
+            this.contentPanel.Size = new System.Drawing.Size(600, 400); // Przystosowane do formy prostokąta
             this.contentPanel.BackColor = SystemColors.Control;
             this.Controls.Add(this.contentPanel);
 
@@ -53,6 +55,7 @@
             this.contentPanel.Controls.Add(this.btnModify);
             this.contentPanel.Controls.Add(this.btnDelete);
             this.contentPanel.Controls.Add(this.btnUpdateMod);
+            this.contentPanel.Controls.Add(this.progressBar); // Dodanie ProgressBar
 
             // Btn Launch
             this.btnLaunch.Location = new System.Drawing.Point(20, 120);
@@ -70,7 +73,8 @@
             this.btnModify.TabIndex = 5;
             this.btnModify.Text = "Modyfikuj";
             this.btnModify.UseVisualStyleBackColor = true;
-            this.btnModify.Enabled = false; // Ustaw na false na starcie
+            this.btnModify.Enabled = false;
+            this.btnModify.Click += new System.EventHandler(this.ModifyButton_Click);
 
             // Btn Delete
             this.btnDelete.Location = new System.Drawing.Point(20, 200);
@@ -112,6 +116,13 @@
             this.labelVersion.Size = new System.Drawing.Size(400, 30);
             this.labelVersion.TabIndex = 2;
             this.labelVersion.Text = "Wersja gry: Nieznana";
+
+            // ProgressBar - dodanie kontrolki
+            this.progressBar.Location = new System.Drawing.Point(20, 370);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(500, 30);
+            this.progressBar.TabIndex = 8;
+            this.progressBar.Visible = false; // Ukryty na starcie
 
             this.ResumeLayout(false);
             this.PerformLayout();
