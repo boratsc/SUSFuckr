@@ -85,7 +85,15 @@ namespace SUSFuckr
             {
                 AddGameIcon(vanillaMod);
             }
-            ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
+            if (vanillaMod != null)
+            {
+                ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
+            }
+            else
+            {
+                // Dodatkowa logika, jeœli vanillaMod jest null (opcjonalna)
+                MessageBox.Show("Nie znaleziono standardowego moda.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void UpdateFormDisplay(ModConfiguration modConfig)
@@ -125,7 +133,7 @@ namespace SUSFuckr
             }
         }
 
-        private PictureBox selectedIcon = null; // Przechowuje aktualnie wybran¹ ikonê
+        private PictureBox? selectedIcon = null; // Przechowuje aktualnie wybran¹ ikonê
         private Dictionary<PictureBox, Bitmap> originalImages = new Dictionary<PictureBox, Bitmap>(); // Przechowuje oryginalne obrazy
 
         private void ConfigureModComponents(List<ModConfiguration> configs)
@@ -195,11 +203,11 @@ namespace SUSFuckr
             {
                 var exePath = Path.Combine(path, "Among Us.exe");
                 var versionInfo = FileVersionInfo.GetVersionInfo(exePath);
-                return versionInfo.FileVersion;
+                return versionInfo.FileVersion ?? "Nieznana";
             }
-            catch (Exception ex)
+            catch
             {
-                Console.WriteLine("Nie uda³o siê odczytaæ wersji gry: {ex.Message}");
+                Console.WriteLine($"Nie uda³o siê odczytaæ wersji gry.");
                 return "Nieznana";
             }
         }

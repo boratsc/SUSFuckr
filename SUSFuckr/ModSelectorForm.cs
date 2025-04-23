@@ -28,11 +28,15 @@ namespace SUSFuckr
 			// Przechodzimy przez wybrane nazwy modów i odczytujemy pe³n¹ konfiguracjê z Dictionary
 			foreach (string selectedName in AvailableModsListBox.SelectedItems)
 			{
-				if (modDictionary.TryGetValue(selectedName, out ModConfiguration modConfig))
-				{
-					SelectedMods.Add(modConfig);
-				}
-			}
+                if (modDictionary.TryGetValue(selectedName, out ModConfiguration? modConfig))
+                {
+                    // Kod, który korzysta z modConfig, powinien sprawdziæ, czy modConfig nie jest null
+                    if (modConfig != null)
+                    {
+                        SelectedMods.Add(modConfig);
+                    }
+                }
+            }
 
 			this.DialogResult = DialogResult.OK;
 			this.Close();

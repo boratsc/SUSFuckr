@@ -30,7 +30,15 @@ namespace SUSFuckr
                     await DownloadFileAsync(fileUrlAmongUs, tempFileAmongUs);
 
                     string modFile = Path.Combine(baseDirectory, "temp", "mod.zip");
-                    await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile);
+                    if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
+                    {
+                        await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return; // lub inna logika obs³ugi b³êdu
+                    }
 
                     string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
                     // Usuniêcie istniej¹cego katalogu, jeœli istnieje
@@ -48,7 +56,8 @@ namespace SUSFuckr
                     ZipFile.ExtractToDirectory(modFile, tempExtractPath);
 
                     // Check structure and move files
-                    string sourcePath;
+                    string? sourcePath;
+
                     if (Directory.Exists(Path.Combine(tempExtractPath, "BepInEx")))
                     {
                         sourcePath = tempExtractPath;
