@@ -23,6 +23,10 @@ namespace SUSFuckr
         {
             InitializeComponent();
             CreateMenu();
+            //Fixujemy wielkoœæ okna
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+
             // Za³aduj konfiguracjê
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
