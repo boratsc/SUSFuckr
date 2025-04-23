@@ -9,17 +9,19 @@ namespace SUSFuckr
 {
     public partial class MainForm : Form
     {
+        private const string AppVersion = "0.3.1";
 
         private List<ModConfiguration> modConfigs;
         private Label progressLabel;
-        private MenuStrip menuStrip;
+        private MenuStrip menuStrip = new MenuStrip();
+        private Panel overlayPanel = new Panel();
 
         public MainForm()
         {
             InitializeComponent();
             CreateMenu();
 
-            Text = "SUSFuckr - przyjazny instalator modów 0.3.0";
+            Text = $"SUSFuckr - przyjazny instalator modów {AppVersion}";
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
@@ -41,30 +43,51 @@ namespace SUSFuckr
 
         private void CreateMenu()
         {
-            // Tworzymy menu g³ówne
             menuStrip = new MenuStrip();
-
-            // Tworzymy pozycjê g³ówn¹ menu "Dodatkowe akcje"
-            ToolStripMenuItem additionalActionsMenuItem = new ToolStripMenuItem("Narzêdzia");
-
-            // Tworzymy podpozycjê menu "Napraw czarny ekran"
+            ToolStripMenuItem additionalActionsMenuItem = new ToolStripMenuItem("Dodatkowe akcje");
             ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw czarny ekran");
             fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
-
-            // Dodajemy podpozycjê do pozycji g³ównej
             additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
-
-            // Dodajemy pozycjê g³ówn¹ do menuStrip
             menuStrip.Items.Add(additionalActionsMenuItem);
 
-            // Przypisujemy menuStrip do formularza
+            ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
+            infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
+            menuStrip.Items.Add(infoMenuItem);
             this.MainMenuStrip = menuStrip;
-            this.Controls.Add(menuStrip); // Dodaj menuStrip do formy
+            this.Controls.Add(menuStrip);
+        }
+
+        private void InfoMenuItem_Click(object sender, EventArgs e)
+        {
+            ShowInfoOverlay();
+        }
+
+        private void ShowInfoOverlay()
+        {
+            contentPanel.Visible = false;  // Ukryj contentPanel gdy nak³adka jest widoczna
+            overlayPanel = Information.CreateInfoOverlay(this, AppVersion, RemoveInfoOverlay);
+            this.Controls.Add(overlayPanel);
+            overlayPanel.BringToFront();
+        }
+
+        private void RemoveInfoOverlay()
+        {
+            if (overlayPanel != null)
+            {
+                this.Controls.Remove(overlayPanel);
+                contentPanel.Visible = true;  // Przywróæ widocznoœæ contentPanel
+            }
         }
 
         private void FixBlackScreenMenuItem_Click(object sender, EventArgs e)
         {
-            FixBlackScreen.ExecuteFix(); // Wywo³anie funkcji
+            FixBlackScreen.ExecuteFix();
+        }
+
+
+        private void ReturnToMain()
+        {
+            return;
         }
 
         private void FormLoad(object? sender, EventArgs e)
