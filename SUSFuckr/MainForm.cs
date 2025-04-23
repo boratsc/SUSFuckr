@@ -51,17 +51,22 @@ namespace SUSFuckr
         {
             // Najpierw pobierz informacje z konfiguracji
             var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
-            if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath))
+            if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath) && Directory.Exists(vanillaMod.InstallPath)) // Sprawdzenie czy Vanilla jest zainstalowane
             {
                 textBoxPath.Text = vanillaMod.InstallPath.Replace('/', '\\');
                 labelVersion.Text = "Wersja gry: " + vanillaMod.AmongVersion;
+                AddGameIcon(vanillaMod);  // Dodaj ikonê Vanilla
+
+                var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
+                if (vanillaIcon != null)
+                {
+                    AddInstalledIcon(vanillaIcon);  // Dodaj grafika 'installed.png'
+                }
             }
             else
             {
-                // Dopiero potem poszukaj gry
                 var path = GameLocator.TryFindAmongUsPath();
                 var version = path != null ? GetGameVersion(path) : "Nieznana";
-
                 if (path != null)
                 {
                     textBoxPath.Text = path.Replace('/', '\\');
@@ -73,7 +78,6 @@ namespace SUSFuckr
                     labelVersion.Text = "Wersja gry: Nieznana";
                 }
 
-                // Aktualizuj lub dodaj Vanilla jeœli nie ma
                 if (vanillaMod == null)
                 {
                     vanillaMod = new ModConfiguration
@@ -89,23 +93,17 @@ namespace SUSFuckr
                     };
                     modConfigs.Add(vanillaMod);
                     ConfigManager.SaveConfig(modConfigs);
+                    AddGameIcon(vanillaMod);
+
+                    var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
+                    if (vanillaIcon != null)
+                    {
+                        AddInstalledIcon(vanillaIcon);
+                    }
                 }
             }
 
-            // Wyœwietl 'Vanilla' jako pierwsza
-            if (vanillaMod != null)
-            {
-                AddGameIcon(vanillaMod);
-            }
-            if (vanillaMod != null)
-            {
-                ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
-            }
-            else
-            {
-                // Dodatkowa logika, jeœli vanillaMod jest null (opcjonalna)
-                MessageBox.Show("Nie znaleziono standardowego moda.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
         }
 
         private void UpdateFormDisplay(ModConfiguration modConfig)
@@ -186,6 +184,14 @@ namespace SUSFuckr
                         Cursor = Cursors.Hand
                     };
                     originalImages[gameIcon] = new Bitmap(gameIcon.Image);
+
+                    // Jeœli mod jest zainstalowany, dodaj grafikê installed.png
+                    if (!string.IsNullOrEmpty(config.InstallPath) && Directory.Exists(config.InstallPath))
+                    {
+                        AddInstalledIcon(gameIcon);
+                    }
+
+
                     gameIcon.Click += GameIcon_Click;
                     this.contentPanel.Controls.Add(gameIcon);
 
@@ -251,6 +257,15 @@ namespace SUSFuckr
                     if (icon != clickedIcon)
                     {
                         icon.Image = new Bitmap(originalImages[icon]);
+                        if (icon.Image != null)
+                        {
+                            string tempModName = icon.Name.Replace("gameIcon_", ""); // U¿yj innej nazwy dla lokalnej zmiennej
+                            var tempModConfig = modConfigs.FirstOrDefault(config => config.ModName == tempModName);
+                            if (tempModConfig != null && !string.IsNullOrEmpty(tempModConfig.InstallPath) && Directory.Exists(tempModConfig.InstallPath))
+                            {
+                                AddInstalledIcon(icon);
+                            }
+                        }
                         icon.Refresh();
                     }
                 }
@@ -267,10 +282,18 @@ namespace SUSFuckr
 
                 selectedIcon = clickedIcon;
 
+                string clickedModName = clickedIcon.Name.Replace("gameIcon_", ""); // U¿yj innej nazwy dla lokalnej zmiennej
+                var clickedModConfig = modConfigs.FirstOrDefault(config => config.ModName == clickedModName);
+
+                if (clickedModConfig != null && !string.IsNullOrEmpty(clickedModConfig.InstallPath) && Directory.Exists(clickedModConfig.InstallPath))
+                {
+                    AddInstalledIcon(clickedIcon);
+                }
+
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
                 if (modConfig != null)
                 {
-                    UpdateFormDisplay(modConfig);  // Zaktualizuj wyœwietlanie formularza i stan przycisku "Modyfikuj"
+                    UpdateFormDisplay(modConfig);
                 }
             }
         }
@@ -468,6 +491,20 @@ namespace SUSFuckr
             else
             {
                 MessageBox.Show("Nie wybrano ¿adnej ikony do aktualizacji.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void AddInstalledIcon(PictureBox gameIcon)
+        {
+            var installedImagePath = Path.Combine("Graphics", "installed.png");
+            if (File.Exists(installedImagePath))
+            {
+                using (var installedImage = Image.FromFile(installedImagePath))
+                using (var graphics = Graphics.FromImage(gameIcon.Image))
+                {
+                    // Rysuj pe³ny obraz - zastosowanie pe³ne wprowadzenie
+                    graphics.DrawImage(installedImage, new Rectangle(0, 0, installedImage.Width, installedImage.Height));
+                }
             }
         }
     }
