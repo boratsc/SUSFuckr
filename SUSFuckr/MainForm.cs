@@ -9,7 +9,7 @@ namespace SUSFuckr
 {
     public partial class MainForm : Form
     {
-        private const string AppVersion = "0.3.1";
+        private const string AppVersion = "0.3.2";
 
         private List<ModConfiguration> modConfigs;
         private Label progressLabel;
@@ -148,7 +148,7 @@ namespace SUSFuckr
 
             ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
         }
-
+       
         private void UpdateFormDisplay(ModConfiguration modConfig)
         {
             if (modConfig != null)
@@ -156,25 +156,29 @@ namespace SUSFuckr
                 textBoxPath.Text = modConfig.InstallPath.Replace('/', '\\');
                 labelVersion.Text = "Wersja gry: " + modConfig.AmongVersion;
 
-                // Przycisk 'Uruchom' powinien byæ aktywny tylko dla modów typu "full" i istniejacy katalog
+                // SprawdŸ, czy mod jest zainstalowany i dodaj ikonê "installed.png"
+                if (!string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath))
+                {
+                    var modIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{modConfig.ModName}");
+                    if (modIcon != null)
+                    {
+                        AddInstalledIcon(modIcon);  // Dodaj grafikê 'installed.png' do ikony modu
+                    }
+                }
+
                 bool isFullType = string.Equals(modConfig.ModType, "full", StringComparison.OrdinalIgnoreCase);
                 bool isVanillaType = string.Equals(modConfig.ModType, "vanilla", StringComparison.OrdinalIgnoreCase);
-
                 btnLaunch.Enabled = (isFullType || isVanillaType) &&
                                     !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
 
-                // SprawdŸ, czy mod jest zainstalowany i odpowiedni typ, lub jeœli jest dll, czy s¹ mody do usuniêcia
                 bool isDllType = string.Equals(modConfig.ModType, "dll", StringComparison.OrdinalIgnoreCase);
-
                 btnModify.Enabled = (isFullType || isDllType) &&
                                     (string.IsNullOrEmpty(modConfig.InstallPath) || !Directory.Exists(modConfig.InstallPath));
-
                 btnDelete.Enabled = modConfigs.Any(m => string.Equals(m.ModType, "full", StringComparison.OrdinalIgnoreCase) &&
                                                         !string.IsNullOrEmpty(m.InstallPath) && Directory.Exists(m.InstallPath)) &&
                                     (isDllType || isFullType);
                 btnUpdateMod.Enabled = isFullType && !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
                 browseButton.Enabled = (isVanillaType);
-
             }
             else
             {
@@ -423,6 +427,7 @@ namespace SUSFuckr
                     if (modificationSuccess)
                     {
                         UpdateFormDisplay(modConfig);
+                        contentPanel.Refresh();
                     }
                 }
                 else
@@ -547,9 +552,9 @@ namespace SUSFuckr
                 using (var installedImage = Image.FromFile(installedImagePath))
                 using (var graphics = Graphics.FromImage(gameIcon.Image))
                 {
-                    // Rysuj pe³ny obraz - zastosowanie pe³ne wprowadzenie
                     graphics.DrawImage(installedImage, new Rectangle(0, 0, installedImage.Width, installedImage.Height));
                 }
+                gameIcon.Refresh(); // Odœwie¿ dla pewnoœci wyœwietlenia
             }
         }
     }
