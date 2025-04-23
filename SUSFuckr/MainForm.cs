@@ -28,9 +28,9 @@ namespace SUSFuckr
         public MainForm()
         {
             InitializeComponent();
-            Text = "SUSFuckr";
+            Text = "SUSFuckr ver. 0.0.0.1";
             Width = 640;
-            Height = 460;
+            Height = 520;
             modConfigs = ConfigManager.LoadConfig();
             Load += FormLoad; // Dodaj wydarzenie ³adowania formularza
         }
