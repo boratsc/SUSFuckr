@@ -29,8 +29,8 @@ namespace SUSFuckr
         {
             InitializeComponent();
             Text = "SUSFuckr";
-            Width = 620;
-            Height = 440;
+            Width = 640;
+            Height = 460;
             modConfigs = ConfigManager.LoadConfig();
             Load += FormLoad; // Dodaj wydarzenie ³adowania formularza
         }
@@ -88,17 +88,31 @@ namespace SUSFuckr
             ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
         }
 
-        private void UpdateFormDisplay(ModConfiguration config)
+        private void UpdateFormDisplay(ModConfiguration modConfig)
         {
-            if (config != null)
+            if (modConfig != null)
             {
-                textBoxPath.Text = config.InstallPath.Replace('/', '\\');
-                labelVersion.Text = "Wersja gry: " + config.AmongVersion;
+                textBoxPath.Text = modConfig.InstallPath.Replace('/', '\\');
+                labelVersion.Text = "Wersja gry: " + modConfig.AmongVersion;
+
+                // Przycisk 'Uruchom' powinien byæ aktywny tylko dla modów typu "full" i istniejacy katalog
+                btnLaunch.Enabled = modConfig.ModType == "full" && !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
+
+
+                // SprawdŸ, czy mod jest zainstalowany i odpowiedni typ, lub jeœli jest dll, czy s¹ mody do usuniêcia
+                btnModify.Enabled = (modConfig.ModType == "full" || modConfig.ModType == "dll") &&
+                                    (string.IsNullOrEmpty(modConfig.InstallPath) || !Directory.Exists(modConfig.InstallPath));
+
+                btnDelete.Enabled = modConfigs.Any(m => m.ModType == "full" && !string.IsNullOrEmpty(m.InstallPath) && Directory.Exists(m.InstallPath)) &&
+                                    (modConfig.ModType == "dll" || modConfig.ModType == "full");
             }
             else
             {
                 textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
                 labelVersion.Text = "Wersja gry: Nieznana";
+                btnLaunch.Enabled = false;
+                btnModify.Enabled = false;
+                btnDelete.Enabled = false;
             }
         }
 
@@ -194,12 +208,15 @@ namespace SUSFuckr
                 labelVersion.Text = "Wersja gry: Nieznana";
             }
         }
+
+
+
+
         private void GameIcon_Click(object? sender, EventArgs e)
         {
             var clickedIcon = sender as PictureBox;
             if (clickedIcon != null)
             {
-                // Usuñ zielone znaczniki z innych ikonek
                 foreach (var icon in originalImages.Keys)
                 {
                     if (icon != clickedIcon)
@@ -209,7 +226,6 @@ namespace SUSFuckr
                     }
                 }
 
-                // Dodanie zielonego znacznika do wybranej ikony
                 if (clickedIcon.Image != null)
                 {
                     using (Graphics graphics = Graphics.FromImage(clickedIcon.Image))
@@ -220,19 +236,17 @@ namespace SUSFuckr
                     clickedIcon.Refresh();
                 }
 
-                selectedIcon = clickedIcon; // Aktualizuj obecnie wybran¹ ikonê
+                selectedIcon = clickedIcon;
 
-                // Pobierz konfiguracjê moda odpowiadaj¹c¹ za wybran¹ ikonê
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
                 if (modConfig != null)
                 {
-                    var modTypeLowerCase = modConfig.ModType.ToLower();
-                    Console.WriteLine($"ModType: {modTypeLowerCase}"); // Logi do weryfikacji
-                    btnLaunch.Enabled = modTypeLowerCase == "full" || modTypeLowerCase == "vanilla";
-                    btnModify.Enabled = modTypeLowerCase == "full" || modTypeLowerCase == "dll";
+                    UpdateFormDisplay(modConfig);  // Zaktualizuj wyœwietlanie formularza i stan przycisku "Modyfikuj"
                 }
             }
         }
+
+
         private void LaunchButton_Click(object sender, EventArgs e)
         {
             if (selectedIcon != null)
@@ -276,7 +290,6 @@ namespace SUSFuckr
             if (selectedIcon != null)
             {
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
-
                 if (modConfig != null)
                 {
                     progressBar.Visible = true;
@@ -284,9 +297,32 @@ namespace SUSFuckr
                     progressBar.MarqueeAnimationSpeed = 30;
 
                     ModManager manager = new ModManager();
-                    await manager.ModifyAsync(modConfig, modConfigs); // U¿ycie metody asynchronicznej
+                    bool modificationSuccess = false;  // Flaga sukcesu operacji
 
-                    progressBar.Visible = false; // Ukryj pasek po zakoñczeniu
+                    if (modConfig.ModType == "full")
+                    {
+                        await manager.ModifyAsync(modConfig, modConfigs);
+                        modificationSuccess = true;
+                    }
+                    else if (modConfig.ModType == "dll")
+                    {
+                        var fullMods = modConfigs.Where(x => x.ModType == "full" && !string.IsNullOrEmpty(x.InstallPath)).ToList();
+                        using var modSelector = new ModSelectorForm(fullMods);
+                        if (modSelector.ShowDialog() == DialogResult.OK)
+                        {
+                            var selectedMods = modSelector.SelectedMods;
+                            await manager.ModifyDllAsync(modConfig, selectedMods);
+                            modificationSuccess = true;
+                        }
+                    }
+
+                    progressBar.Visible = false;
+
+                    // Odœwie¿ formularz, jeœli modyfikacja zakoñczy³a siê sukcesem
+                    if (modificationSuccess)
+                    {
+                        UpdateFormDisplay(modConfig);
+                    }
                 }
                 else
                 {
@@ -350,6 +386,24 @@ namespace SUSFuckr
             catch (FileNotFoundException)
             {
                 MessageBox.Show($"Nie znaleziono pliku graficznego: {config.PngFileName}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void DeleteButton_Click(object sender, EventArgs e)
+        {
+            if (selectedIcon != null)
+            {
+                var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
+                if (modConfig != null && btnDelete.Enabled)
+                {
+                    ModDelete.DeleteMod(modConfig, modConfigs);
+                    // Odœwie¿ formularz po usuniêciu
+                    UpdateFormDisplay(modConfig);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Nie wybrano ¿adnej ikony do usuniêcia.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

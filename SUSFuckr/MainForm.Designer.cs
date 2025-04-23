@@ -43,7 +43,7 @@
             // contentPanel
             this.contentPanel.Location = new System.Drawing.Point(7, 7); // Panel o 7px mniejszy niż okno
             this.contentPanel.Name = "contentPanel";
-            this.contentPanel.Size = new System.Drawing.Size(600, 400); // Przystosowane do formy prostokąta
+            this.contentPanel.Size = new System.Drawing.Size(600, 450); // Przystosowane do formy prostokąta
             this.contentPanel.BackColor = SystemColors.Control;
             this.Controls.Add(this.contentPanel);
 
@@ -71,7 +71,7 @@
             this.btnModify.Name = "btnModify";
             this.btnModify.Size = new System.Drawing.Size(500, 30);
             this.btnModify.TabIndex = 5;
-            this.btnModify.Text = "Modyfikuj";
+            this.btnModify.Text = "Instaluj moda";
             this.btnModify.UseVisualStyleBackColor = true;
             this.btnModify.Enabled = false;
             this.btnModify.Click += new System.EventHandler(this.ModifyButton_Click);
@@ -84,6 +84,7 @@
             this.btnDelete.Text = "Usuń";
             this.btnDelete.UseVisualStyleBackColor = true;
             this.btnDelete.Enabled = false;
+            this.btnDelete.Click += new System.EventHandler(this.DeleteButton_Click);
 
             // Btn Update Mod
             this.btnUpdateMod.Location = new System.Drawing.Point(20, 240);
@@ -98,7 +99,7 @@
             this.textBoxPath.Location = new System.Drawing.Point(140, 290);
             this.textBoxPath.Name = "textBoxPath";
             this.textBoxPath.ReadOnly = true;
-            this.textBoxPath.Size = new System.Drawing.Size(400, 26);
+            this.textBoxPath.Size = new System.Drawing.Size(380, 26);
             this.textBoxPath.TabIndex = 0;
 
             // Browse Button

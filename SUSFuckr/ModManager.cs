@@ -33,6 +33,11 @@ namespace SUSFuckr
                     await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile);
 
                     string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
+                    // Usuniêcie istniej¹cego katalogu, jeœli istnieje
+                    if (Directory.Exists(modFolderPath))
+                    {
+                        Directory.Delete(modFolderPath, true);
+                    }
                     Directory.CreateDirectory(modFolderPath);
 
                     // Use 'using statements to automatically handle resource disposal
@@ -109,6 +114,42 @@ namespace SUSFuckr
             {
                 string destinationDir = Path.Combine(destDir, Path.GetFileName(dir));
                 DirectoryCopy(dir, destinationDir);
+            }
+        }
+
+
+        public async Task ModifyDllAsync(ModConfiguration modConfig, List<ModConfiguration> installedFullMods)
+        {
+            try
+            {
+                string dllUrl = modConfig.GitHubRepoOrLink ?? throw new InvalidOperationException("URL DLL jest wymagany.");
+                string baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody");
+                Directory.CreateDirectory(baseDirectory);
+
+                // Uzyskaj nazwê pliku z URL-a
+                string fileName = Path.GetFileName(new Uri(dllUrl).AbsolutePath);
+                string tempDllFile = Path.Combine(baseDirectory, "temp", fileName);
+                Directory.CreateDirectory(Path.GetDirectoryName(tempDllFile)!);
+
+                // Pobierz plik DLL
+                await DownloadFileAsync(dllUrl, tempDllFile);
+
+                foreach (var fullMod in installedFullMods)
+                {
+                    string targetDir = Path.Combine(fullMod.InstallPath, modConfig.DllInstallPath ?? string.Empty);
+                    Directory.CreateDirectory(targetDir);
+                    string targetFile = Path.Combine(targetDir, fileName);  // Zachowaj nazwê pliku
+                    File.Copy(tempDllFile, targetFile, true);
+                }
+
+                // Czyszczenie katalogu temp
+                Directory.Delete(Path.Combine(baseDirectory, "temp"), true);
+
+                MessageBox.Show($"Modyfikacja DLL zakoñczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Wyst¹pi³ b³¹d podczas modyfikacji DLL: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
