@@ -19,7 +19,7 @@ namespace SUSFuckr
             InitializeComponent();
             CreateMenu();
 
-            Text = "SUSFuckr - przyjazny instalator modów 0.2.5";
+            Text = "SUSFuckr - przyjazny instalator modów 0.3.0";
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
