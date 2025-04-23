@@ -24,15 +24,27 @@ namespace SUSFuckr
             }
         }
         private List<ModConfiguration> modConfigs;
+        private Label progressLabel;
 
         public MainForm()
         {
             InitializeComponent();
-            Text = "SUSFuckr ver. 0.2.3";
+            Text = "SUSFuckr - przyjazny instalator modów 0.2.4";
             Width = 640;
             Height = 520;
+
             modConfigs = ConfigManager.LoadConfig();
-            Load += FormLoad; // Dodaj wydarzenie ³adowania formularza
+            Load += FormLoad;
+
+            // Inicjalizacjê progressLabel
+            progressLabel = new Label
+            {
+                AutoSize = true,
+                BackColor = Color.Transparent,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Location = new Point(progressBar.Width / 2 - 50, progressBar.Height / 2 - 10),
+            };
+            progressBar.Controls.Add(progressLabel); // Dodaj progressLabel do paska postêpu
         }
 
         private void FormLoad(object? sender, EventArgs e)
@@ -318,7 +330,7 @@ namespace SUSFuckr
                         progressBar.Visible = true; // Poka¿ pasek postêpu
                         progressBar.Style = ProgressBarStyle.Continuous; // Zmieñ na ci¹g³y styl
 
-                        await manager.ModifyAsync(modConfig, modConfigs, progressBar);
+                        await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel);
                         modificationSuccess = true;
                     }
                     else if (modConfig.ModType == "dll")
@@ -331,12 +343,13 @@ namespace SUSFuckr
                             var selectedMods = modSelector.SelectedMods;
 
                             progressBar.Visible = true; // Poka¿ pasek postêpu dla DLL
-                            await manager.ModifyDllAsync(modConfig, selectedMods, progressBar);
+                            await manager.ModifyDllAsync(modConfig, selectedMods, progressBar, progressLabel);
                             modificationSuccess = true;
                         }
                     }
 
                     progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu
+                    progressLabel.Visible = false; // Ukryj etykietê po zakoñczeniu pobierania
 
                     // Odœwie¿ formularz, jeœli modyfikacja zakoñczy³a siê sukcesem
                     if (modificationSuccess)
@@ -440,7 +453,7 @@ namespace SUSFuckr
                     progressBar.Style = ProgressBarStyle.Continuous; // Zmieñ na sta³y styl, by wyœwietlaæ postêp
                     progressBar.Value = 0; // Zresetuj pasek postêpu
 
-                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar); // Przeka¿ ProgressBar do œledzenia postêpu
+                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel); // Przeka¿ ProgressBar do œledzenia postêpu
 
                     progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu
 

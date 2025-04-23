@@ -13,7 +13,7 @@ namespace SUSFuckr
     {
         private readonly string baseUrl = "http://polatany.ipv64.net:8087/";
 
-        public async Task ModifyAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs, ProgressBar progressBar)
+        public async Task ModifyAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs, ProgressBar progressBar, Label progressLabel)
         {
             if (modConfig.ModType == "full")
             {
@@ -29,14 +29,16 @@ namespace SUSFuckr
 
                     progressBar.Visible = true; // Poka¿ pasek postêpu dla pobierania pliku gry
                     progressBar.Style = ProgressBarStyle.Continuous;
-                    await DownloadFileAsync(fileUrlAmongUs, tempFileAmongUs, progressBar);
+                    progressLabel.Text = "Plik 1 z 2 - 0% pobierania...";
+                    await DownloadFileAsync(fileUrlAmongUs, tempFileAmongUs, progressBar, progressLabel, "1");
 
                     string modFile = Path.Combine(baseDirectory, "temp", "mod.zip");
 
                     if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
                     {
                         progressBar.Visible = true; // Poka¿ pasek postêpu dla pobierania moda
-                        await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar);
+                        progressLabel.Text = "Plik 2 z 2 - 0% pobierania...";
+                        await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar, progressLabel, "2");
                     }
                     else
                     {
@@ -128,7 +130,7 @@ namespace SUSFuckr
         }
 
 
-        public async Task ModifyDllAsync(ModConfiguration modConfig, List<ModConfiguration> installedFullMods, ProgressBar progressBar)
+        public async Task ModifyDllAsync(ModConfiguration modConfig, List<ModConfiguration> installedFullMods, ProgressBar progressBar, Label progressLabel)
         {
             try
             {
@@ -136,13 +138,16 @@ namespace SUSFuckr
                 string baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody");
                 Directory.CreateDirectory(baseDirectory);
 
-                // Uzyskaj nazwê pliku z URL-a
                 string fileName = Path.GetFileName(new Uri(dllUrl).AbsolutePath);
                 string tempDllFile = Path.Combine(baseDirectory, "temp", fileName);
                 Directory.CreateDirectory(Path.GetDirectoryName(tempDllFile)!);
 
                 // Pobierz plik DLL
-                await DownloadFileAsync(dllUrl, tempDllFile, progressBar);
+                progressBar.Visible = true; // Poka¿ pasek postêpu na pocz¹tku pobierania
+                progressBar.Style = ProgressBarStyle.Continuous;
+                progressLabel.Text = "Pobieranie DLL - 0% pobierania...";
+                await DownloadFileAsync(dllUrl, tempDllFile, progressBar, progressLabel, "2");
+                progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu pobierania
 
                 foreach (var fullMod in installedFullMods)
                 {
@@ -152,7 +157,6 @@ namespace SUSFuckr
                     File.Copy(tempDllFile, targetFile, true);
                 }
 
-                // Czyszczenie katalogu temp
                 Directory.Delete(Path.Combine(baseDirectory, "temp"), true);
 
                 MessageBox.Show($"Instalacja DLL zakoñczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -163,23 +167,23 @@ namespace SUSFuckr
             }
         }
 
-        private async Task DownloadFileAsync(string url, string targetPath, ProgressBar progressBar)
+        private async Task DownloadFileAsync(string url, string targetPath, ProgressBar progressBar, Label progressLabel, string fileNumber)
         {
             using (var client = new HttpClient())
             {
                 client.Timeout = TimeSpan.FromMinutes(5);
 
-                using (var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                using (HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                 {
                     response.EnsureSuccessStatusCode();
+                    var totalBytes = response.Content.Headers.ContentLength ?? 1;
 
-                    var totalBytes = response.Content.Headers.ContentLength ?? 1; // Za³ó¿ d³ugoœæ dla procenta
                     using (var stream = await response.Content.ReadAsStreamAsync())
                     {
                         using (var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
-                            var buffer = new byte[81920]; // Iloœæ przekazywanych danych na raz (80 KB)
-                            var totalRead = 0L; // Rozpocznij od 0
+                            var buffer = new byte[81920];
+                            long totalRead = 0L;
                             int bytesRead;
 
                             while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
@@ -187,9 +191,12 @@ namespace SUSFuckr
                                 await fileStream.WriteAsync(buffer, 0, bytesRead);
                                 totalRead += bytesRead;
 
-                                // Oblicz procent za³adowanych danych i aktualizuj pasek postêpu
                                 var percentDone = (int)((totalRead * 100) / totalBytes);
-                                progressBar.Invoke(new Action(() => progressBar.Value = percentDone));
+                                progressBar.Invoke(new Action(() =>
+                                {
+                                    progressBar.Value = percentDone;
+                                    progressLabel.Text = $"Plik {fileNumber} z 2 - {percentDone}% pobierania";
+                                }));
                             }
                         }
                     }
