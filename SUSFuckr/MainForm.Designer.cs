@@ -8,6 +8,7 @@
         private System.Windows.Forms.Label labelVersion;
         private System.Windows.Forms.Button btnLaunch;
         private System.Windows.Forms.Button btnModify;
+        private System.Windows.Forms.Button btnFixBlackScreen;
         private System.Windows.Forms.Button btnDelete;
         private System.Windows.Forms.Button btnUpdateMod;
         private System.Windows.Forms.Panel contentPanel;
@@ -32,6 +33,7 @@
             this.btnDelete = new System.Windows.Forms.Button();
             this.btnUpdateMod = new System.Windows.Forms.Button();
             this.contentPanel = new System.Windows.Forms.Panel();
+            this.btnFixBlackScreen = new System.Windows.Forms.Button();
             this.progressBar = new System.Windows.Forms.ProgressBar(); // Inicjalizacja ProgressBar
 
             // MainForm
@@ -41,7 +43,7 @@
             this.BackColor = Color.LightGray;
 
             // contentPanel
-            this.contentPanel.Location = new System.Drawing.Point(7, 7); // Panel o 7px mniejszy niż okno
+            this.contentPanel.Location = new System.Drawing.Point(7, 25); // Panel o 7px mniejszy niż okno
             this.contentPanel.Name = "contentPanel";
             this.contentPanel.Size = new System.Drawing.Size(600, 450); // Przystosowane do formy prostokąta
             this.contentPanel.BackColor = SystemColors.Control;

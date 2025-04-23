@@ -29,6 +29,7 @@ namespace SUSFuckr
 
                     progressBar.Visible = true; // Poka¿ pasek postêpu dla pobierania pliku gry
                     progressBar.Style = ProgressBarStyle.Continuous;
+                    progressLabel.Visible = true;
                     progressLabel.Text = "Plik 1 z 2 - 0% pobierania...";
                     await DownloadFileAsync(fileUrlAmongUs, tempFileAmongUs, progressBar, progressLabel, "1");
 

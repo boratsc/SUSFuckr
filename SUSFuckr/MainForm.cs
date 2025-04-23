@@ -9,29 +9,22 @@ namespace SUSFuckr
 {
     public partial class MainForm : Form
     {
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            base.OnPaint(e);
-            Rectangle bounds = contentPanel.Bounds;
-            using (GraphicsPath path = new GraphicsPath())
-            {
-                path.AddArc(bounds.Left, bounds.Top, 20, 20, 180, 90);
-                path.AddArc(bounds.Right - 20, bounds.Top, 20, 20, 270, 90);
-                path.AddArc(bounds.Right - 20, bounds.Bottom - 20, 20, 20, 0, 90);
-                path.AddArc(bounds.Left, bounds.Bottom - 20, 20, 20, 90, 90);
-                path.CloseFigure();
-                contentPanel.Region = new Region(path);
-            }
-        }
+        private const string AppVersion = "0.3.1";
+
         private List<ModConfiguration> modConfigs;
         private Label progressLabel;
+        private MenuStrip menuStrip = new MenuStrip();
+        private Panel overlayPanel = new Panel();
 
         public MainForm()
         {
             InitializeComponent();
-            Text = "SUSFuckr - przyjazny instalator modów 0.2.4";
+            CreateMenu();
+
+            Text = $"SUSFuckr - przyjazny instalator modów {AppVersion}";
             Width = 640;
             Height = 520;
+            Icon = new Icon("Graphics/icon.ico");
 
             modConfigs = ConfigManager.LoadConfig();
             Load += FormLoad;
@@ -45,6 +38,56 @@ namespace SUSFuckr
                 Location = new Point(progressBar.Width / 2 - 50, progressBar.Height / 2 - 10),
             };
             progressBar.Controls.Add(progressLabel); // Dodaj progressLabel do paska postêpu
+
+        }
+
+        private void CreateMenu()
+        {
+            menuStrip = new MenuStrip();
+            ToolStripMenuItem additionalActionsMenuItem = new ToolStripMenuItem("Dodatkowe akcje");
+            ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw czarny ekran");
+            fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
+            additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
+            menuStrip.Items.Add(additionalActionsMenuItem);
+
+            ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
+            infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
+            menuStrip.Items.Add(infoMenuItem);
+            this.MainMenuStrip = menuStrip;
+            this.Controls.Add(menuStrip);
+        }
+
+        private void InfoMenuItem_Click(object sender, EventArgs e)
+        {
+            ShowInfoOverlay();
+        }
+
+        private void ShowInfoOverlay()
+        {
+            contentPanel.Visible = false;  // Ukryj contentPanel gdy nak³adka jest widoczna
+            overlayPanel = Information.CreateInfoOverlay(this, AppVersion, RemoveInfoOverlay);
+            this.Controls.Add(overlayPanel);
+            overlayPanel.BringToFront();
+        }
+
+        private void RemoveInfoOverlay()
+        {
+            if (overlayPanel != null)
+            {
+                this.Controls.Remove(overlayPanel);
+                contentPanel.Visible = true;  // Przywróæ widocznoœæ contentPanel
+            }
+        }
+
+        private void FixBlackScreenMenuItem_Click(object sender, EventArgs e)
+        {
+            FixBlackScreen.ExecuteFix();
+        }
+
+
+        private void ReturnToMain()
+        {
+            return;
         }
 
         private void FormLoad(object? sender, EventArgs e)
@@ -130,6 +173,7 @@ namespace SUSFuckr
                                                         !string.IsNullOrEmpty(m.InstallPath) && Directory.Exists(m.InstallPath)) &&
                                     (isDllType || isFullType);
                 btnUpdateMod.Enabled = isFullType && !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
+                browseButton.Enabled = (isVanillaType);
 
             }
             else
@@ -137,6 +181,7 @@ namespace SUSFuckr
                 textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
                 labelVersion.Text = "Wersja gry: Nieznana";
                 btnLaunch.Enabled = false;
+                browseButton.Enabled = false;
                 btnModify.Enabled = false;
                 btnDelete.Enabled = false;
                 btnUpdateMod.Enabled = false;
