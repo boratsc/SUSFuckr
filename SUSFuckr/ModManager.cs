@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using System.IO.Compression;
 using System.Collections.Generic;
 using System.Windows.Forms;
-using System.Linq;  // Add this namespace for the FirstOrDefault extension method
+using System.Linq;  
 
 namespace SUSFuckr
 {
@@ -72,13 +72,13 @@ namespace SUSFuckr
                     // Clean up temp directory
                     Directory.Delete(Path.Combine(baseDirectory, "temp"), true);
 
-                    MessageBox.Show($"Modyfikacja zakoñczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"Instalacja zakoñczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     GC.Collect();
                     GC.WaitForPendingFinalizers();
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Wyst¹pi³ b³¹d podczas modyfikacji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Wyst¹pi³ b³¹d podczas Instalacji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     GC.Collect();
                     GC.WaitForPendingFinalizers();
                 }
@@ -145,11 +145,11 @@ namespace SUSFuckr
                 // Czyszczenie katalogu temp
                 Directory.Delete(Path.Combine(baseDirectory, "temp"), true);
 
-                MessageBox.Show($"Modyfikacja DLL zakoñczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Instalacja DLL zakoñczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Wyst¹pi³ b³¹d podczas modyfikacji DLL: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Wyst¹pi³ b³¹d podczas instalacji DLL: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 

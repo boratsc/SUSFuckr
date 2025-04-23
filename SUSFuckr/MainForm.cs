@@ -96,15 +96,23 @@ namespace SUSFuckr
                 labelVersion.Text = "Wersja gry: " + modConfig.AmongVersion;
 
                 // Przycisk 'Uruchom' powinien byæ aktywny tylko dla modów typu "full" i istniejacy katalog
-                btnLaunch.Enabled = modConfig.ModType == "full" && !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
+                bool isFullType = string.Equals(modConfig.ModType, "full", StringComparison.OrdinalIgnoreCase);
+                bool isVanillaType = string.Equals(modConfig.ModType, "vanilla", StringComparison.OrdinalIgnoreCase);
 
+                btnLaunch.Enabled = (isFullType || isVanillaType) &&
+                                    !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
 
                 // SprawdŸ, czy mod jest zainstalowany i odpowiedni typ, lub jeœli jest dll, czy s¹ mody do usuniêcia
-                btnModify.Enabled = (modConfig.ModType == "full" || modConfig.ModType == "dll") &&
+                bool isDllType = string.Equals(modConfig.ModType, "dll", StringComparison.OrdinalIgnoreCase);
+
+                btnModify.Enabled = (isFullType || isDllType) &&
                                     (string.IsNullOrEmpty(modConfig.InstallPath) || !Directory.Exists(modConfig.InstallPath));
 
-                btnDelete.Enabled = modConfigs.Any(m => m.ModType == "full" && !string.IsNullOrEmpty(m.InstallPath) && Directory.Exists(m.InstallPath)) &&
-                                    (modConfig.ModType == "dll" || modConfig.ModType == "full");
+                btnDelete.Enabled = modConfigs.Any(m => string.Equals(m.ModType, "full", StringComparison.OrdinalIgnoreCase) &&
+                                                        !string.IsNullOrEmpty(m.InstallPath) && Directory.Exists(m.InstallPath)) &&
+                                    (isDllType || isFullType);
+                btnUpdateMod.Enabled = isFullType && !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
+
             }
             else
             {
@@ -113,6 +121,7 @@ namespace SUSFuckr
                 btnLaunch.Enabled = false;
                 btnModify.Enabled = false;
                 btnDelete.Enabled = false;
+                btnUpdateMod.Enabled = false;
             }
         }
 
@@ -404,6 +413,36 @@ namespace SUSFuckr
             else
             {
                 MessageBox.Show("Nie wybrano ¿adnej ikony do usuniêcia.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+
+        private async void UpdateModButton_Click(object sender, EventArgs e)
+        {
+            if (selectedIcon != null)
+            {
+                var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
+                if (modConfig != null)
+                {
+                    progressBar.Visible = true;
+                    progressBar.Style = ProgressBarStyle.Marquee;
+                    progressBar.MarqueeAnimationSpeed = 30;
+
+                    await ModUpdates.UpdateModAsync(modConfig, modConfigs);
+
+                    progressBar.Visible = false;
+
+                    // Odœwie¿ formularz po aktualizacji
+                    UpdateFormDisplay(modConfig);
+                }
+                else
+                {
+                    MessageBox.Show("Nie mo¿na znaleŸæ konfiguracji dla wybranego moda.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Nie wybrano ¿adnej ikony do aktualizacji.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

@@ -94,6 +94,7 @@
             this.btnUpdateMod.Text = "Aktualizuj moda";
             this.btnUpdateMod.UseVisualStyleBackColor = true;
             this.btnUpdateMod.Enabled = false;
+            this.btnUpdateMod.Click += new System.EventHandler(this.UpdateModButton_Click);
 
             // TextBox Path
             this.textBoxPath.Location = new System.Drawing.Point(140, 290);
