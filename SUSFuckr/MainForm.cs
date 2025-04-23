@@ -29,7 +29,7 @@ namespace SUSFuckr
         public MainForm()
         {
             InitializeComponent();
-            Text = "SUSFuckr - przyjazny instalator modów 0.2.4";
+            Text = "SUSFuckr - przyjazny instalator modów 0.2.5";
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
