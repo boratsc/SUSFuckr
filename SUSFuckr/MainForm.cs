@@ -28,7 +28,7 @@ namespace SUSFuckr
         public MainForm()
         {
             InitializeComponent();
-            Text = "SUSFuckr ver. 0.0.0.1";
+            Text = "SUSFuckr ver. 0.2.1";
             Width = 640;
             Height = 520;
             modConfigs = ConfigManager.LoadConfig();
