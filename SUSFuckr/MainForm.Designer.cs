@@ -1,0 +1,133 @@
+﻿namespace SUSFuckr
+{
+    partial class MainForm
+    {
+        private System.ComponentModel.IContainer components = null;
+        private System.Windows.Forms.TextBox textBoxPath;
+        private System.Windows.Forms.Button browseButton;
+        private System.Windows.Forms.Label labelVersion;
+        private System.Windows.Forms.Button btnLaunch;
+        private System.Windows.Forms.Button btnModify;
+        private System.Windows.Forms.Button btnDelete;
+        private System.Windows.Forms.Button btnUpdateMod;
+        private System.Windows.Forms.Panel contentPanel;
+        private System.Windows.Forms.ProgressBar progressBar; // Dodaj kontrolkę ProgressBar
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && (components != null))
+            {
+                components.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        private void InitializeComponent()
+        {
+            this.textBoxPath = new System.Windows.Forms.TextBox();
+            this.browseButton = new System.Windows.Forms.Button();
+            this.labelVersion = new System.Windows.Forms.Label();
+            this.btnLaunch = new System.Windows.Forms.Button();
+            this.btnModify = new System.Windows.Forms.Button();
+            this.btnDelete = new System.Windows.Forms.Button();
+            this.btnUpdateMod = new System.Windows.Forms.Button();
+            this.contentPanel = new System.Windows.Forms.Panel();
+            this.progressBar = new System.Windows.Forms.ProgressBar(); // Inicjalizacja ProgressBar
+
+            // MainForm
+            this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(620, 480); // Zwiększona wysokość dla paska
+            this.BackColor = Color.LightGray;
+
+            // contentPanel
+            this.contentPanel.Location = new System.Drawing.Point(7, 7); // Panel o 7px mniejszy niż okno
+            this.contentPanel.Name = "contentPanel";
+            this.contentPanel.Size = new System.Drawing.Size(600, 450); // Przystosowane do formy prostokąta
+            this.contentPanel.BackColor = SystemColors.Control;
+            this.Controls.Add(this.contentPanel);
+
+            // Relokacja kontrolek w contentPanel
+            this.contentPanel.Controls.Add(this.browseButton);
+            this.contentPanel.Controls.Add(this.textBoxPath);
+            this.contentPanel.Controls.Add(this.labelVersion);
+            this.contentPanel.Controls.Add(this.btnLaunch);
+            this.contentPanel.Controls.Add(this.btnModify);
+            this.contentPanel.Controls.Add(this.btnDelete);
+            this.contentPanel.Controls.Add(this.btnUpdateMod);
+            this.contentPanel.Controls.Add(this.progressBar); // Dodanie ProgressBar
+
+            // Btn Launch
+            this.btnLaunch.Location = new System.Drawing.Point(20, 120);
+            this.btnLaunch.Name = "btnLaunch";
+            this.btnLaunch.Size = new System.Drawing.Size(500, 30);
+            this.btnLaunch.TabIndex = 4;
+            this.btnLaunch.Text = "Uruchom";
+            this.btnLaunch.UseVisualStyleBackColor = true;
+            this.btnLaunch.Click += new System.EventHandler(this.LaunchButton_Click);
+
+            // Btn Modify
+            this.btnModify.Location = new System.Drawing.Point(20, 160);
+            this.btnModify.Name = "btnModify";
+            this.btnModify.Size = new System.Drawing.Size(500, 30);
+            this.btnModify.TabIndex = 5;
+            this.btnModify.Text = "Instaluj moda";
+            this.btnModify.UseVisualStyleBackColor = true;
+            this.btnModify.Enabled = false;
+            this.btnModify.Click += new System.EventHandler(this.ModifyButton_Click);
+
+            // Btn Delete
+            this.btnDelete.Location = new System.Drawing.Point(20, 200);
+            this.btnDelete.Name = "btnDelete";
+            this.btnDelete.Size = new System.Drawing.Size(500, 30);
+            this.btnDelete.TabIndex = 6;
+            this.btnDelete.Text = "Usuń";
+            this.btnDelete.UseVisualStyleBackColor = true;
+            this.btnDelete.Enabled = false;
+            this.btnDelete.Click += new System.EventHandler(this.DeleteButton_Click);
+
+            // Btn Update Mod
+            this.btnUpdateMod.Location = new System.Drawing.Point(20, 240);
+            this.btnUpdateMod.Name = "btnUpdateMod";
+            this.btnUpdateMod.Size = new System.Drawing.Size(500, 30);
+            this.btnUpdateMod.TabIndex = 7;
+            this.btnUpdateMod.Text = "Aktualizuj moda";
+            this.btnUpdateMod.UseVisualStyleBackColor = true;
+            this.btnUpdateMod.Enabled = false;
+            this.btnUpdateMod.Click += new System.EventHandler(this.UpdateModButton_Click);
+
+            // TextBox Path
+            this.textBoxPath.Location = new System.Drawing.Point(140, 290);
+            this.textBoxPath.Name = "textBoxPath";
+            this.textBoxPath.ReadOnly = true;
+            this.textBoxPath.Size = new System.Drawing.Size(380, 26);
+            this.textBoxPath.TabIndex = 0;
+
+            // Browse Button
+            this.browseButton.Location = new System.Drawing.Point(20, 290);
+            this.browseButton.Name = "browseButton";
+            this.browseButton.Size = new System.Drawing.Size(100, 30);
+            this.browseButton.TabIndex = 1;
+            this.browseButton.Text = "Wskaż ręcznie";
+            this.browseButton.UseVisualStyleBackColor = true;
+            this.browseButton.Click += new System.EventHandler(this.BrowseButton_Click);
+
+            // Label Version
+            this.labelVersion.Location = new System.Drawing.Point(20, 325);
+            this.labelVersion.Name = "labelVersion";
+            this.labelVersion.Size = new System.Drawing.Size(400, 30);
+            this.labelVersion.TabIndex = 2;
+            this.labelVersion.Text = "Wersja gry: Nieznana";
+
+            // ProgressBar - dodanie kontrolki
+            this.progressBar.Location = new System.Drawing.Point(20, 370);
+            this.progressBar.Name = "progressBar";
+            this.progressBar.Size = new System.Drawing.Size(500, 30);
+            this.progressBar.TabIndex = 8;
+            this.progressBar.Visible = false; // Ukryty na starcie
+
+            this.ResumeLayout(false);
+            this.PerformLayout();
+        }
+    }
+}

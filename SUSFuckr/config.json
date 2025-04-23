@@ -1,0 +1,35 @@
+[
+    {
+        "ModName": "Town Of Us - R",
+        "PngFileName": "ToU.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/eDonnes124/Town-Of-Us-R/releases/download/v5.2.1/ToU.v5.2.1.zip",
+        "ModType": "full",
+        "DllInstallPath": null,
+        "ModVersion": "5.2.1",
+        "LastUpdated": "2025-02-08T00:00:00",
+        "AmongVersion": "2024-10-29"
+    },
+    {
+        "ModName": "All The Roles",
+        "PngFileName": "AllTheRoles.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/Zeo666/AllTheRoles/releases/download/0.12.3/AllTheRoles-0.12.3.zip",
+        "ModType": "full",
+        "DllInstallPath": null,
+        "ModVersion": "0.12.3",
+        "LastUpdated": "2025-02-08T00:00:00",
+        "AmongVersion": "16.0.2"
+    },
+    {
+        "ModName": "AleLuduMod",
+        "PngFileName": "AleLuduMod.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/townofus-pl/AleLuduMod/",
+        "ModType": "dll",
+        "DllInstallPath": "BepInEx\\plugins",
+        "ModVersion": "1.0.4",
+        "LastUpdated": "2025-01-15T00:00:00",
+        "AmongVersion": "2024-09-15"
+    }
+]
