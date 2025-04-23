@@ -13,7 +13,7 @@ namespace SUSFuckr
     {
         private readonly string baseUrl = "http://polatany.ipv64.net:8087/";
 
-        public async Task ModifyAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs)
+        public async Task ModifyAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs, ProgressBar progressBar)
         {
             if (modConfig.ModType == "full")
             {
@@ -27,28 +27,40 @@ namespace SUSFuckr
                     string tempFileAmongUs = Path.Combine(baseDirectory, "temp", fileName);
                     Directory.CreateDirectory(Path.GetDirectoryName(tempFileAmongUs)!);
 
-                    await DownloadFileAsync(fileUrlAmongUs, tempFileAmongUs);
+                    progressBar.Visible = true; // Poka¿ pasek postêpu dla pobierania pliku gry
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    await DownloadFileAsync(fileUrlAmongUs, tempFileAmongUs, progressBar);
 
                     string modFile = Path.Combine(baseDirectory, "temp", "mod.zip");
-                    await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile);
+
+                    if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
+                    {
+                        progressBar.Visible = true; // Poka¿ pasek postêpu dla pobierania moda
+                        await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar);
+                    }
+                    else
+                    {
+                        MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return; // lub inna logika obs³ugi b³êdu
+                    }
+
+                    progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu pobierania
 
                     string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
-                    // Usuniêcie istniej¹cego katalogu, jeœli istnieje
+
                     if (Directory.Exists(modFolderPath))
                     {
                         Directory.Delete(modFolderPath, true);
                     }
                     Directory.CreateDirectory(modFolderPath);
 
-                    // Use 'using statements to automatically handle resource disposal
                     ZipFile.ExtractToDirectory(tempFileAmongUs, modFolderPath);
 
                     string tempExtractPath = Path.Combine(baseDirectory, "temp", "extractMod");
                     Directory.CreateDirectory(tempExtractPath);
                     ZipFile.ExtractToDirectory(modFile, tempExtractPath);
 
-                    // Check structure and move files
-                    string sourcePath;
+                    string? sourcePath;
                     if (Directory.Exists(Path.Combine(tempExtractPath, "BepInEx")))
                     {
                         sourcePath = tempExtractPath;
@@ -65,11 +77,9 @@ namespace SUSFuckr
 
                     CopyContent(sourcePath, modFolderPath);
 
-                    // Update config and clean up
                     modConfig.InstallPath = modFolderPath;
                     ConfigManager.SaveConfig(modConfigs);
 
-                    // Clean up temp directory
                     Directory.Delete(Path.Combine(baseDirectory, "temp"), true);
 
                     MessageBox.Show($"Instalacja zakoñczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -118,7 +128,7 @@ namespace SUSFuckr
         }
 
 
-        public async Task ModifyDllAsync(ModConfiguration modConfig, List<ModConfiguration> installedFullMods)
+        public async Task ModifyDllAsync(ModConfiguration modConfig, List<ModConfiguration> installedFullMods, ProgressBar progressBar)
         {
             try
             {
@@ -132,7 +142,7 @@ namespace SUSFuckr
                 Directory.CreateDirectory(Path.GetDirectoryName(tempDllFile)!);
 
                 // Pobierz plik DLL
-                await DownloadFileAsync(dllUrl, tempDllFile);
+                await DownloadFileAsync(dllUrl, tempDllFile, progressBar);
 
                 foreach (var fullMod in installedFullMods)
                 {
@@ -153,20 +163,34 @@ namespace SUSFuckr
             }
         }
 
-        private static async Task DownloadFileAsync(string url, string targetPath)
+        private async Task DownloadFileAsync(string url, string targetPath, ProgressBar progressBar)
         {
-            // Proper use of using to ensure all disposable resources are cleared
-            using (HttpClient client = new HttpClient())
+            using (var client = new HttpClient())
             {
-                using (HttpResponseMessage response = await client.GetAsync(url))
+                client.Timeout = TimeSpan.FromMinutes(5);
+
+                using (var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                 {
                     response.EnsureSuccessStatusCode();
+
+                    var totalBytes = response.Content.Headers.ContentLength ?? 1; // Za³ó¿ d³ugoœæ dla procenta
                     using (var stream = await response.Content.ReadAsStreamAsync())
                     {
-                        // Use using to automatically release FileStream resources
                         using (var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None))
                         {
-                            await stream.CopyToAsync(fileStream);
+                            var buffer = new byte[81920]; // Iloœæ przekazywanych danych na raz (80 KB)
+                            var totalRead = 0L; // Rozpocznij od 0
+                            int bytesRead;
+
+                            while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                            {
+                                await fileStream.WriteAsync(buffer, 0, bytesRead);
+                                totalRead += bytesRead;
+
+                                // Oblicz procent za³adowanych danych i aktualizuj pasek postêpu
+                                var percentDone = (int)((totalRead * 100) / totalBytes);
+                                progressBar.Invoke(new Action(() => progressBar.Value = percentDone));
+                            }
                         }
                     }
                 }

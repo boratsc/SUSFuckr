@@ -6,16 +6,21 @@ namespace SUSFuckr
 {
     public class ModUpdates
     {
-        public static async Task UpdateModAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs)
+        public static async Task UpdateModAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs, ProgressBar progressBar)
         {
             try
             {
                 if (modConfig.ModType == "full")
                 {
+                    progressBar.Visible = true; // Poka¿ pasek postêpu na pocz¹tku
+                    progressBar.Style = ProgressBarStyle.Continuous;
+
                     ModDelete.DeleteMod(modConfig, modConfigs); // Usuniêcie moda
 
                     ModManager manager = new ModManager();
-                    await manager.ModifyAsync(modConfig, modConfigs); // Modyfikowanie moda
+                    await manager.ModifyAsync(modConfig, modConfigs, progressBar); // Modyfikowanie moda z ProgressBar
+
+                    progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu modyfikacji
 
                     MessageBox.Show($"Mod '{modConfig.ModName}' zosta³ pomyœlnie zaktualizowany.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
