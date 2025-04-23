@@ -32,6 +32,7 @@ namespace SUSFuckr
             Text = "SUSFuckr - przyjazny instalator modów 0.2.4";
             Width = 640;
             Height = 520;
+            Icon = new Icon("Graphics/icon.ico");
 
             modConfigs = ConfigManager.LoadConfig();
             Load += FormLoad;
