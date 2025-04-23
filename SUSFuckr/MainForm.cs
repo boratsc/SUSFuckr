@@ -28,7 +28,7 @@ namespace SUSFuckr
         public MainForm()
         {
             InitializeComponent();
-            Text = "SUSFuckr ver. 0.2.1";
+            Text = "SUSFuckr ver. 0.2.3";
             Width = 640;
             Height = 520;
             modConfigs = ConfigManager.LoadConfig();
@@ -307,33 +307,36 @@ namespace SUSFuckr
             if (selectedIcon != null)
             {
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
+
                 if (modConfig != null)
                 {
-                    progressBar.Visible = true;
-                    progressBar.Style = ProgressBarStyle.Marquee;
-                    progressBar.MarqueeAnimationSpeed = 30;
-
                     ModManager manager = new ModManager();
-                    bool modificationSuccess = false;  // Flaga sukcesu operacji
+                    bool modificationSuccess = false; // Flaga sukcesu operacji
 
                     if (modConfig.ModType == "full")
                     {
-                        await manager.ModifyAsync(modConfig, modConfigs);
+                        progressBar.Visible = true; // Poka¿ pasek postêpu
+                        progressBar.Style = ProgressBarStyle.Continuous; // Zmieñ na ci¹g³y styl
+
+                        await manager.ModifyAsync(modConfig, modConfigs, progressBar);
                         modificationSuccess = true;
                     }
                     else if (modConfig.ModType == "dll")
                     {
                         var fullMods = modConfigs.Where(x => x.ModType == "full" && !string.IsNullOrEmpty(x.InstallPath)).ToList();
                         using var modSelector = new ModSelectorForm(fullMods);
+
                         if (modSelector.ShowDialog() == DialogResult.OK)
                         {
                             var selectedMods = modSelector.SelectedMods;
-                            await manager.ModifyDllAsync(modConfig, selectedMods);
+
+                            progressBar.Visible = true; // Poka¿ pasek postêpu dla DLL
+                            await manager.ModifyDllAsync(modConfig, selectedMods, progressBar);
                             modificationSuccess = true;
                         }
                     }
 
-                    progressBar.Visible = false;
+                    progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu
 
                     // Odœwie¿ formularz, jeœli modyfikacja zakoñczy³a siê sukcesem
                     if (modificationSuccess)
@@ -430,15 +433,16 @@ namespace SUSFuckr
             if (selectedIcon != null)
             {
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
+
                 if (modConfig != null)
                 {
                     progressBar.Visible = true;
-                    progressBar.Style = ProgressBarStyle.Marquee;
-                    progressBar.MarqueeAnimationSpeed = 30;
+                    progressBar.Style = ProgressBarStyle.Continuous; // Zmieñ na sta³y styl, by wyœwietlaæ postêp
+                    progressBar.Value = 0; // Zresetuj pasek postêpu
 
-                    await ModUpdates.UpdateModAsync(modConfig, modConfigs);
+                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar); // Przeka¿ ProgressBar do œledzenia postêpu
 
-                    progressBar.Visible = false;
+                    progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu
 
                     // Odœwie¿ formularz po aktualizacji
                     UpdateFormDisplay(modConfig);
