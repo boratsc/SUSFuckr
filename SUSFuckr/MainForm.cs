@@ -131,6 +131,7 @@ namespace SUSFuckr
                                                         !string.IsNullOrEmpty(m.InstallPath) && Directory.Exists(m.InstallPath)) &&
                                     (isDllType || isFullType);
                 btnUpdateMod.Enabled = isFullType && !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
+                browseButton.Enabled = (isVanillaType);
 
             }
             else
@@ -138,6 +139,7 @@ namespace SUSFuckr
                 textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
                 labelVersion.Text = "Wersja gry: Nieznana";
                 btnLaunch.Enabled = false;
+                browseButton.Enabled = false;
                 btnModify.Enabled = false;
                 btnDelete.Enabled = false;
                 btnUpdateMod.Enabled = false;
