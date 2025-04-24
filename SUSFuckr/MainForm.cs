@@ -5,23 +5,35 @@ using System.IO;
 using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Drawing.Drawing2D;
+using Microsoft.Extensions.Configuration;
+
 namespace SUSFuckr
 {
     public partial class MainForm : Form
     {
-        private const string AppVersion = "0.3.1";
+        
 
         private List<ModConfiguration> modConfigs;
         private Label progressLabel;
         private MenuStrip menuStrip = new MenuStrip();
         private Panel overlayPanel = new Panel();
+        private readonly IConfiguration Configuration;
+        private readonly string appVersion = string.Empty;  // Dodaj pole appVersion
 
         public MainForm()
         {
             InitializeComponent();
             CreateMenu();
 
-            Text = $"SUSFuckr - przyjazny instalator modów {AppVersion}";
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
+            Configuration = builder.Build();
+            appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1"; // Inicjalizacja
+
+            Text = $"SUSFuckr - przyjazny instalator modów {appVersion}"; // U¿ycie `appVersion`
+
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
@@ -48,24 +60,70 @@ namespace SUSFuckr
             ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw czarny ekran");
             fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
             additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
+
+            ToolStripMenuItem updateConfigItem = new ToolStripMenuItem("Aktualizuj konfiguracjê");
+            updateConfigItem.Click += new EventHandler(UpdateConfigMenuItem_Click);
+            additionalActionsMenuItem.DropDownItems.Add(updateConfigItem);
+
             menuStrip.Items.Add(additionalActionsMenuItem);
 
             ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
             menuStrip.Items.Add(infoMenuItem);
+
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
         }
 
-        private void InfoMenuItem_Click(object sender, EventArgs e)
+
+        private async void UpdateConfigMenuItem_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                // Œci¹ganie nowego pliku konfiguracji
+                var tempFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.temp.json");
+                using (HttpClient client = new HttpClient())
+                {
+                    HttpResponseMessage response = await client.GetAsync(Configuration["Configuration:UpdateServerUrl"]);
+                    response.EnsureSuccessStatusCode();
+                    using (FileStream fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
+                    {
+                        await response.Content.CopyToAsync(fs);
+                    }
+                }
+
+                ConfigUpdater.CompareAndMergeConfigurations(tempFilePath);
+                File.Delete(tempFilePath);
+
+                MessageBox.Show("Konfiguracja zosta³a zaktualizowana. Aplikacja zostanie teraz ponownie uruchomiona.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // Zamknij i otwórz aplikacjê ponownie
+                RestartApplication();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"B³¹d podczas aktualizacji konfiguracji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void RestartApplication()
+        {
+            var exePath = Application.ExecutablePath;
+            Process.Start(exePath);
+            Application.Exit();
+        }
+
+
+
+        private void InfoMenuItem_Click(object? sender, EventArgs e)
         {
             ShowInfoOverlay();
         }
 
         private void ShowInfoOverlay()
         {
-            contentPanel.Visible = false;  // Ukryj contentPanel gdy nak³adka jest widoczna
-            overlayPanel = Information.CreateInfoOverlay(this, AppVersion, RemoveInfoOverlay);
+            contentPanel.Visible = false;
+            overlayPanel = Information.CreateInfoOverlay(this, appVersion, RemoveInfoOverlay); // Poprawne u¿ycie `appVersion`
             this.Controls.Add(overlayPanel);
             overlayPanel.BringToFront();
         }
@@ -79,7 +137,7 @@ namespace SUSFuckr
             }
         }
 
-        private void FixBlackScreenMenuItem_Click(object sender, EventArgs e)
+        private void FixBlackScreenMenuItem_Click(object? sender, EventArgs e)
         {
             FixBlackScreen.ExecuteFix();
         }
@@ -148,7 +206,7 @@ namespace SUSFuckr
 
             ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
         }
-
+       
         private void UpdateFormDisplay(ModConfiguration modConfig)
         {
             if (modConfig != null)
@@ -156,25 +214,29 @@ namespace SUSFuckr
                 textBoxPath.Text = modConfig.InstallPath.Replace('/', '\\');
                 labelVersion.Text = "Wersja gry: " + modConfig.AmongVersion;
 
-                // Przycisk 'Uruchom' powinien byæ aktywny tylko dla modów typu "full" i istniejacy katalog
+                // SprawdŸ, czy mod jest zainstalowany i dodaj ikonê "installed.png"
+                if (!string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath))
+                {
+                    var modIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{modConfig.ModName}");
+                    if (modIcon != null)
+                    {
+                        AddInstalledIcon(modIcon);  // Dodaj grafikê 'installed.png' do ikony modu
+                    }
+                }
+
                 bool isFullType = string.Equals(modConfig.ModType, "full", StringComparison.OrdinalIgnoreCase);
                 bool isVanillaType = string.Equals(modConfig.ModType, "vanilla", StringComparison.OrdinalIgnoreCase);
-
                 btnLaunch.Enabled = (isFullType || isVanillaType) &&
                                     !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
 
-                // SprawdŸ, czy mod jest zainstalowany i odpowiedni typ, lub jeœli jest dll, czy s¹ mody do usuniêcia
                 bool isDllType = string.Equals(modConfig.ModType, "dll", StringComparison.OrdinalIgnoreCase);
-
                 btnModify.Enabled = (isFullType || isDllType) &&
                                     (string.IsNullOrEmpty(modConfig.InstallPath) || !Directory.Exists(modConfig.InstallPath));
-
                 btnDelete.Enabled = modConfigs.Any(m => string.Equals(m.ModType, "full", StringComparison.OrdinalIgnoreCase) &&
                                                         !string.IsNullOrEmpty(m.InstallPath) && Directory.Exists(m.InstallPath)) &&
                                     (isDllType || isFullType);
                 btnUpdateMod.Enabled = isFullType && !string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath);
                 browseButton.Enabled = (isVanillaType);
-
             }
             else
             {
@@ -387,10 +449,9 @@ namespace SUSFuckr
             if (selectedIcon != null)
             {
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
-
                 if (modConfig != null)
                 {
-                    ModManager manager = new ModManager();
+                    ModManager manager = new ModManager(Configuration);
                     bool modificationSuccess = false; // Flaga sukcesu operacji
 
                     if (modConfig.ModType == "full")
@@ -423,6 +484,7 @@ namespace SUSFuckr
                     if (modificationSuccess)
                     {
                         UpdateFormDisplay(modConfig);
+                        contentPanel.Refresh();
                     }
                 }
                 else
@@ -521,8 +583,7 @@ namespace SUSFuckr
                     progressBar.Style = ProgressBarStyle.Continuous; // Zmieñ na sta³y styl, by wyœwietlaæ postêp
                     progressBar.Value = 0; // Zresetuj pasek postêpu
 
-                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel); // Przeka¿ ProgressBar do œledzenia postêpu
-
+                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel, Configuration); // Przekazanie Configuration
                     progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu
 
                     // Odœwie¿ formularz po aktualizacji
@@ -547,9 +608,9 @@ namespace SUSFuckr
                 using (var installedImage = Image.FromFile(installedImagePath))
                 using (var graphics = Graphics.FromImage(gameIcon.Image))
                 {
-                    // Rysuj pe³ny obraz - zastosowanie pe³ne wprowadzenie
                     graphics.DrawImage(installedImage, new Rectangle(0, 0, installedImage.Width, installedImage.Height));
                 }
+                gameIcon.Refresh(); // Odœwie¿ dla pewnoœci wyœwietlenia
             }
         }
     }
