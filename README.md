@@ -14,3 +14,6 @@ SUSFuckr to aplikacja do zarządzania modami dla popularnej gry **Among Us**. Um
 
 - .NET 8.0 lub nowszy
 - Windows 10 lub nowszy
+
+
+<a href="https://liberapay.com/boracik/donate"><img alt="Donate using Liberapay" src="https://liberapay.com/assets/widgets/donate.svg"></a>
