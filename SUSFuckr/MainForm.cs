@@ -20,11 +20,13 @@ namespace SUSFuckr
         private readonly IConfiguration Configuration;
         private readonly string appVersion = string.Empty;  // Dodaj pole appVersion
 
+        private ToolTip toolTip;
+
         public MainForm()
         {
             InitializeComponent();
             CreateMenu();
-
+                toolTip = new ToolTip();
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
@@ -37,6 +39,8 @@ namespace SUSFuckr
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
+
+            toolTip = new ToolTip();
 
             modConfigs = ConfigManager.LoadConfig();
             Load += FormLoad;
@@ -71,13 +75,18 @@ namespace SUSFuckr
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
             menuStrip.Items.Add(infoMenuItem);
 
-            ToolStripMenuItem supportMenuItem = new ToolStripMenuItem("Wesprzyj mnie");
+            ToolStripMenuItem supportMenuItem = new ToolStripMenuItem("Donate na certyfikat");
             supportMenuItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
             {
                 FileName = "https://liberapay.com/boracik/donate",
                 UseShellExecute = true
             });
+
             menuStrip.Items.Add(supportMenuItem);
+
+            // Ustawienie tooltipa na hover nad supportMenuItem
+            supportMenuItem.MouseHover += (s, ev) => toolTip.Show("Zbieram hajs, ¿eby Windows siê nie plu³, ¿e aplikacja jest niebezpieczna!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
+
 
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
