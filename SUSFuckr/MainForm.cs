@@ -11,30 +11,29 @@ namespace SUSFuckr
 {
     public partial class MainForm : Form
     {
-        private const string AppVersion = "0.3.2";
+        
 
         private List<ModConfiguration> modConfigs;
         private Label progressLabel;
         private MenuStrip menuStrip = new MenuStrip();
         private Panel overlayPanel = new Panel();
         private readonly IConfiguration Configuration;
+        private readonly string appVersion = string.Empty;  // Dodaj pole appVersion
 
         public MainForm()
         {
             InitializeComponent();
             CreateMenu();
-            //Fixujemy wielkoœæ okna
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
-            this.MaximizeBox = false;
 
-            // Za³aduj konfiguracjê
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
             Configuration = builder.Build();
+            appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1"; // Inicjalizacja
 
-            Text = $"SUSFuckr - przyjazny instalator modów {AppVersion}";
+            Text = $"SUSFuckr - przyjazny instalator modów {appVersion}"; // U¿ycie `appVersion`
+
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
@@ -123,8 +122,8 @@ namespace SUSFuckr
 
         private void ShowInfoOverlay()
         {
-            contentPanel.Visible = false;  // Ukryj contentPanel gdy nak³adka jest widoczna
-            overlayPanel = Information.CreateInfoOverlay(this, AppVersion, RemoveInfoOverlay);
+            contentPanel.Visible = false;
+            overlayPanel = Information.CreateInfoOverlay(this, appVersion, RemoveInfoOverlay); // Poprawne u¿ycie `appVersion`
             this.Controls.Add(overlayPanel);
             overlayPanel.BringToFront();
         }
@@ -450,10 +449,9 @@ namespace SUSFuckr
             if (selectedIcon != null)
             {
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
-
                 if (modConfig != null)
                 {
-                    ModManager manager = new ModManager();
+                    ModManager manager = new ModManager(Configuration);
                     bool modificationSuccess = false; // Flaga sukcesu operacji
 
                     if (modConfig.ModType == "full")
@@ -585,8 +583,7 @@ namespace SUSFuckr
                     progressBar.Style = ProgressBarStyle.Continuous; // Zmieñ na sta³y styl, by wyœwietlaæ postêp
                     progressBar.Value = 0; // Zresetuj pasek postêpu
 
-                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel); // Przeka¿ ProgressBar do œledzenia postêpu
-
+                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel, Configuration); // Przekazanie Configuration
                     progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu
 
                     // Odœwie¿ formularz po aktualizacji

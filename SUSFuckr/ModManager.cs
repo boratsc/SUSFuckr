@@ -5,13 +5,20 @@ using System.Threading.Tasks;
 using System.IO.Compression;
 using System.Collections.Generic;
 using System.Windows.Forms;
-using System.Linq;  
+using System.Linq;
+using Microsoft.Extensions.Configuration;
+
 
 namespace SUSFuckr
 {
     public class ModManager
     {
-        private readonly string baseUrl = "http://polatany.ipv64.net:8087/";
+        private readonly string baseUrl;
+
+        public ModManager(IConfiguration configuration)
+        {
+            baseUrl = configuration["Configuration:BaseUrl"] ?? throw new ArgumentNullException(nameof(configuration), "BaseUrl is not configured.");
+        }
 
         public async Task ModifyAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs, ProgressBar progressBar, Label progressLabel)
         {

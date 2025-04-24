@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Extensions.Configuration;
 
 namespace SUSFuckr
 {
@@ -10,7 +11,8 @@ namespace SUSFuckr
             ModConfiguration modConfig,
             List<ModConfiguration> modConfigs,
             ProgressBar progressBar,
-            Label progressLabel) // Dodanie labelu
+            Label progressLabel,
+            IConfiguration configuration) // Dodanie IConfiguration jako parametru
         {
             try
             {
@@ -18,14 +20,10 @@ namespace SUSFuckr
                 {
                     progressBar.Visible = true;
                     progressBar.Style = ProgressBarStyle.Continuous;
-
                     ModDelete.DeleteMod(modConfig, modConfigs);
-
-                    ModManager manager = new ModManager();
-                    await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel); // Przekazanie label
-
+                    ModManager manager = new ModManager(configuration); // Przekazanie configuration
+                    await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel);
                     progressBar.Visible = false;
-
                     MessageBox.Show($"Mod '{modConfig.ModName}' zosta³ pomyœlnie zaktualizowany.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
