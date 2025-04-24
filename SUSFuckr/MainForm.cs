@@ -20,22 +20,29 @@ namespace SUSFuckr
         private readonly IConfiguration Configuration;
         private readonly string appVersion = string.Empty;
         private ToolTip toolTip;
+
+
         public MainForm()
         {
             InitializeComponent();
             CreateMenu();
             toolTip = new ToolTip();
+
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
-
             Configuration = builder.Build();
             appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1";
+
+            // Upewnij siê, ¿e konfiguracja jest zainicjalizowana
+            ModConfigHandler.Initialize(Configuration);
+
             Text = $"SUSFuckr - przyjazny instalator modów {appVersion}";
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
             modConfigs = ConfigManager.LoadConfig();
+
             Load += FormLoad;
 
             progressLabel = new Label
@@ -45,7 +52,6 @@ namespace SUSFuckr
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(progressBar.Width / 2 - 50, progressBar.Height / 2 - 10),
             };
-
             progressBar.Controls.Add(progressLabel);
         }
 
