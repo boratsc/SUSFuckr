@@ -5,47 +5,39 @@ using System.IO;
 using System.Windows.Forms;
 using System.Collections.Generic;
 using System.Drawing.Drawing2D;
+using System.Linq;
+using System.Net.Http;
 using Microsoft.Extensions.Configuration;
 
 namespace SUSFuckr
 {
     public partial class MainForm : Form
     {
-        
-
         private List<ModConfiguration> modConfigs;
         private Label progressLabel;
         private MenuStrip menuStrip = new MenuStrip();
         private Panel overlayPanel = new Panel();
         private readonly IConfiguration Configuration;
-        private readonly string appVersion = string.Empty;  // Dodaj pole appVersion
-
+        private readonly string appVersion = string.Empty;
         private ToolTip toolTip;
-
         public MainForm()
         {
             InitializeComponent();
             CreateMenu();
-                toolTip = new ToolTip();
+            toolTip = new ToolTip();
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
 
             Configuration = builder.Build();
-            appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1"; // Inicjalizacja
-
-            Text = $"SUSFuckr - przyjazny instalator modów {appVersion}"; // U¿ycie `appVersion`
-
+            appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1";
+            Text = $"SUSFuckr - przyjazny instalator modów {appVersion}";
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
-
-            toolTip = new ToolTip();
-
             modConfigs = ConfigManager.LoadConfig();
             Load += FormLoad;
 
-            // Inicjalizacjê progressLabel
             progressLabel = new Label
             {
                 AutoSize = true,
@@ -53,14 +45,33 @@ namespace SUSFuckr
                 TextAlign = ContentAlignment.MiddleCenter,
                 Location = new Point(progressBar.Width / 2 - 50, progressBar.Height / 2 - 10),
             };
-            progressBar.Controls.Add(progressLabel); // Dodaj progressLabel do paska postêpu
 
+            progressBar.Controls.Add(progressLabel);
         }
 
         private void CreateMenu()
         {
             menuStrip = new MenuStrip();
             ToolStripMenuItem additionalActionsMenuItem = new ToolStripMenuItem("Dodatkowe akcje");
+
+            ToolStripMenuItem touConfigItem = new ToolStripMenuItem("Konfiguracje ToU");
+            ToolStripMenuItem saveLocalConfigItem = new ToolStripMenuItem("Zapisz konfiguracje lokalnie");
+            saveLocalConfigItem.Click += (s, ev) => ModConfigHandler.SaveLocalConfig();
+            touConfigItem.DropDownItems.Add(saveLocalConfigItem);
+
+            ToolStripMenuItem loadLocalConfigItem = new ToolStripMenuItem("Wczytaj konfiguracje lokalne");
+            loadLocalConfigItem.Click += (s, ev) => ModConfigHandler.LoadLocalConfig();
+            touConfigItem.DropDownItems.Add(loadLocalConfigItem);
+
+            ToolStripMenuItem saveServerConfigItem = new ToolStripMenuItem("Zapisz konfiguracje na serwerze");
+            saveServerConfigItem.Click += async (s, ev) => await ModConfigHandler.SaveServerConfigAsync();
+            touConfigItem.DropDownItems.Add(saveServerConfigItem);
+
+            ToolStripMenuItem loadServerConfigItem = new ToolStripMenuItem("Wczytaj konfiguracje z serwera");
+            loadServerConfigItem.Click += async (s, ev) => await ModConfigHandler.LoadServerConfigAsync();
+            touConfigItem.DropDownItems.Add(loadServerConfigItem);
+            additionalActionsMenuItem.DropDownItems.Add(touConfigItem);
+
             ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw czarny ekran");
             fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
             additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
@@ -68,36 +79,33 @@ namespace SUSFuckr
             ToolStripMenuItem updateConfigItem = new ToolStripMenuItem("Aktualizuj konfiguracjê");
             updateConfigItem.Click += new EventHandler(UpdateConfigMenuItem_Click);
             additionalActionsMenuItem.DropDownItems.Add(updateConfigItem);
-
             menuStrip.Items.Add(additionalActionsMenuItem);
 
             ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
             menuStrip.Items.Add(infoMenuItem);
 
-            ToolStripMenuItem supportMenuItem = new ToolStripMenuItem("Donate na certyfikat");
+            ToolStripMenuItem supportMenuItem = new ToolStripMenuItem("Donate");
             supportMenuItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
             {
                 FileName = "https://liberapay.com/boracik/donate",
                 UseShellExecute = true
             });
 
-            menuStrip.Items.Add(supportMenuItem);
-
-            // Ustawienie tooltipa na hover nad supportMenuItem
             supportMenuItem.MouseHover += (s, ev) => toolTip.Show("Zbieram hajs, ¿eby Windows siê nie plu³, ¿e aplikacja jest niebezpieczna!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
-
+            menuStrip.Items.Add(supportMenuItem);
 
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
         }
 
 
+
+
         private async void UpdateConfigMenuItem_Click(object? sender, EventArgs e)
         {
             try
             {
-                // Œci¹ganie nowego pliku konfiguracji
                 var tempFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.temp.json");
                 using (HttpClient client = new HttpClient())
                 {
@@ -108,13 +116,9 @@ namespace SUSFuckr
                         await response.Content.CopyToAsync(fs);
                     }
                 }
-
                 ConfigUpdater.CompareAndMergeConfigurations(tempFilePath);
                 File.Delete(tempFilePath);
-
                 MessageBox.Show("Konfiguracja zosta³a zaktualizowana. Aplikacja zostanie teraz ponownie uruchomiona.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                // Zamknij i otwórz aplikacjê ponownie
                 RestartApplication();
             }
             catch (Exception ex)
@@ -130,8 +134,6 @@ namespace SUSFuckr
             Application.Exit();
         }
 
-
-
         private void InfoMenuItem_Click(object? sender, EventArgs e)
         {
             ShowInfoOverlay();
@@ -140,7 +142,7 @@ namespace SUSFuckr
         private void ShowInfoOverlay()
         {
             contentPanel.Visible = false;
-            overlayPanel = Information.CreateInfoOverlay(this, appVersion, RemoveInfoOverlay); // Poprawne u¿ycie `appVersion`
+            overlayPanel = Information.CreateInfoOverlay(this, appVersion, RemoveInfoOverlay);
             this.Controls.Add(overlayPanel);
             overlayPanel.BringToFront();
         }
@@ -150,7 +152,7 @@ namespace SUSFuckr
             if (overlayPanel != null)
             {
                 this.Controls.Remove(overlayPanel);
-                contentPanel.Visible = true;  // Przywróæ widocznoœæ contentPanel
+                contentPanel.Visible = true;
             }
         }
 
@@ -159,7 +161,6 @@ namespace SUSFuckr
             FixBlackScreen.ExecuteFix();
         }
 
-
         private void ReturnToMain()
         {
             return;
@@ -167,18 +168,16 @@ namespace SUSFuckr
 
         private void FormLoad(object? sender, EventArgs e)
         {
-            // Najpierw pobierz informacje z konfiguracji
             var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
-            if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath) && Directory.Exists(vanillaMod.InstallPath)) // Sprawdzenie czy Vanilla jest zainstalowane
+            if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath) && Directory.Exists(vanillaMod.InstallPath))
             {
                 textBoxPath.Text = vanillaMod.InstallPath.Replace('/', '\\');
                 labelVersion.Text = "Wersja: " + vanillaMod.AmongVersion;
-                AddGameIcon(vanillaMod);  // Dodaj ikonê Vanilla
-
+                AddGameIcon(vanillaMod);
                 var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
                 if (vanillaIcon != null)
                 {
-                    AddInstalledIcon(vanillaIcon);  // Dodaj grafika 'installed.png'
+                    AddInstalledIcon(vanillaIcon);
                 }
             }
             else
@@ -212,7 +211,6 @@ namespace SUSFuckr
                     modConfigs.Add(vanillaMod);
                     ConfigManager.SaveConfig(modConfigs);
                     AddGameIcon(vanillaMod);
-
                     var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
                     if (vanillaIcon != null)
                     {
@@ -220,10 +218,9 @@ namespace SUSFuckr
                     }
                 }
             }
-
             ConfigureModComponents(modConfigs.Where(x => x.ModName != vanillaMod.ModName).ToList());
         }
-       
+
         private void UpdateFormDisplay(ModConfiguration modConfig)
         {
             if (modConfig != null)
@@ -231,13 +228,12 @@ namespace SUSFuckr
                 textBoxPath.Text = modConfig.InstallPath.Replace('/', '\\');
                 labelVersion.Text = "Wersja: " + modConfig.AmongVersion;
 
-                // SprawdŸ, czy mod jest zainstalowany i dodaj ikonê "installed.png"
                 if (!string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath))
                 {
                     var modIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{modConfig.ModName}");
                     if (modIcon != null)
                     {
-                        AddInstalledIcon(modIcon);  // Dodaj grafikê 'installed.png' do ikony modu
+                        AddInstalledIcon(modIcon);
                     }
                 }
 
@@ -267,9 +263,8 @@ namespace SUSFuckr
             }
         }
 
-        private PictureBox? selectedIcon = null; // Przechowuje aktualnie wybran¹ ikonê
-        private Dictionary<PictureBox, Bitmap> originalImages = new Dictionary<PictureBox, Bitmap>(); // Przechowuje oryginalne obrazy
-
+        private PictureBox? selectedIcon = null;
+        private Dictionary<PictureBox, Bitmap> originalImages = new Dictionary<PictureBox, Bitmap>();
         private void ConfigureModComponents(List<ModConfiguration> configs)
         {
             int initialX = 94;
@@ -284,20 +279,16 @@ namespace SUSFuckr
                     var imageFile = Path.Combine("Graphics", config.PngFileName);
                     if (!File.Exists(imageFile))
                     {
-                        // Jeœli plik ikony z konfiguracji nie istnieje, u¿yj "Vanilla.png"
                         Console.WriteLine($"Pomijanie grafiki: {config.PngFileName} poniewa¿ plik nie istnieje.");
                         imageFile = Path.Combine("Graphics", "Vanilla.png");
-
-                        // Wywal komunikat jeœli "Vanilla.png" równie¿ nie istnieje
                         if (!File.Exists(imageFile))
                         {
                             MessageBox.Show("Nie znaleziono domyœlnego pliku graficznego: Vanilla.png", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            continue; // Przeskocz ten mod w takim przypadku
+                            continue;
                         }
                     }
 
                     Console.WriteLine($"Dodaj ikonê dla: {config.ModName}, PngFileName: {config.PngFileName}");
-
                     var gameIcon = new PictureBox
                     {
                         Location = new Point(initialX, initialY),
@@ -307,15 +298,13 @@ namespace SUSFuckr
                         Image = Image.FromFile(imageFile),
                         Cursor = Cursors.Hand
                     };
+
                     originalImages[gameIcon] = new Bitmap(gameIcon.Image);
 
-                    // Jeœli mod jest zainstalowany, dodaj grafikê installed.png
                     if (!string.IsNullOrEmpty(config.InstallPath) && Directory.Exists(config.InstallPath))
                     {
                         AddInstalledIcon(gameIcon);
                     }
-
-
                     gameIcon.Click += GameIcon_Click;
                     this.contentPanel.Controls.Add(gameIcon);
 
@@ -353,23 +342,6 @@ namespace SUSFuckr
                 return "Nieznana";
             }
         }
-        private void DisplayGameVersion(string path)
-        {
-            try
-            {
-                var exePath = Path.Combine(path, "Among Us.exe");
-                var versionInfo = FileVersionInfo.GetVersionInfo(exePath);
-                labelVersion.Text = "Wersja: " + versionInfo.FileVersion;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Nie uda³o siê odczytaæ wersji gry. " + ex.Message, "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                labelVersion.Text = "Wersja: Nieznana";
-            }
-        }
-
-
-
 
         private void GameIcon_Click(object? sender, EventArgs e)
         {
@@ -383,7 +355,7 @@ namespace SUSFuckr
                         icon.Image = new Bitmap(originalImages[icon]);
                         if (icon.Image != null)
                         {
-                            string tempModName = icon.Name.Replace("gameIcon_", ""); // U¿yj innej nazwy dla lokalnej zmiennej
+                            string tempModName = icon.Name.Replace("gameIcon_", "");
                             var tempModConfig = modConfigs.FirstOrDefault(config => config.ModName == tempModName);
                             if (tempModConfig != null && !string.IsNullOrEmpty(tempModConfig.InstallPath) && Directory.Exists(tempModConfig.InstallPath))
                             {
@@ -403,17 +375,13 @@ namespace SUSFuckr
                     }
                     clickedIcon.Refresh();
                 }
-
                 selectedIcon = clickedIcon;
-
-                string clickedModName = clickedIcon.Name.Replace("gameIcon_", ""); // U¿yj innej nazwy dla lokalnej zmiennej
+                string clickedModName = clickedIcon.Name.Replace("gameIcon_", "");
                 var clickedModConfig = modConfigs.FirstOrDefault(config => config.ModName == clickedModName);
-
                 if (clickedModConfig != null && !string.IsNullOrEmpty(clickedModConfig.InstallPath) && Directory.Exists(clickedModConfig.InstallPath))
                 {
                     AddInstalledIcon(clickedIcon);
                 }
-
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
                 if (modConfig != null)
                 {
@@ -422,18 +390,14 @@ namespace SUSFuckr
             }
         }
 
-
         private void LaunchButton_Click(object sender, EventArgs e)
         {
             if (selectedIcon != null)
             {
-                // Pobierz konfiguracjê moda odpowiadaj¹cego za wybran¹ ikonê
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
-
                 if (modConfig != null)
                 {
                     var exePath = Path.Combine(modConfig.InstallPath, "Among Us.exe");
-
                     if (File.Exists(exePath))
                     {
                         try
@@ -469,13 +433,11 @@ namespace SUSFuckr
                 if (modConfig != null)
                 {
                     ModManager manager = new ModManager(Configuration);
-                    bool modificationSuccess = false; // Flaga sukcesu operacji
-
+                    bool modificationSuccess = false;
                     if (modConfig.ModType == "full")
                     {
-                        progressBar.Visible = true; // Poka¿ pasek postêpu
-                        progressBar.Style = ProgressBarStyle.Continuous; // Zmieñ na ci¹g³y styl
-
+                        progressBar.Visible = true;
+                        progressBar.Style = ProgressBarStyle.Continuous;
                         await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel);
                         modificationSuccess = true;
                     }
@@ -483,21 +445,16 @@ namespace SUSFuckr
                     {
                         var fullMods = modConfigs.Where(x => x.ModType == "full" && !string.IsNullOrEmpty(x.InstallPath)).ToList();
                         using var modSelector = new ModSelectorForm(fullMods);
-
                         if (modSelector.ShowDialog() == DialogResult.OK)
                         {
                             var selectedMods = modSelector.SelectedMods;
-
-                            progressBar.Visible = true; // Poka¿ pasek postêpu dla DLL
+                            progressBar.Visible = true;
                             await manager.ModifyDllAsync(modConfig, selectedMods, progressBar, progressLabel);
                             modificationSuccess = true;
                         }
                     }
-
-                    progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu
-                    progressLabel.Visible = false; // Ukryj etykietê po zakoñczeniu pobierania
-
-                    // Odœwie¿ formularz, jeœli modyfikacja zakoñczy³a siê sukcesem
+                    progressBar.Visible = false;
+                    progressLabel.Visible = false;
                     if (modificationSuccess)
                     {
                         UpdateFormDisplay(modConfig);
@@ -534,6 +491,22 @@ namespace SUSFuckr
                 }
             }
         }
+
+        private void DisplayGameVersion(string path)
+        {
+            try
+            {
+                var exePath = Path.Combine(path, "Among Us.exe");
+                var versionInfo = FileVersionInfo.GetVersionInfo(exePath);
+                labelVersion.Text = "Wersja: " + versionInfo.FileVersion;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Nie uda³o siê odczytaæ wersji gry. " + ex.Message, "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                labelVersion.Text = "Wersja: Nieznana";
+            }
+        }
+
         private void AddGameIcon(ModConfiguration config)
         {
             try
@@ -549,7 +522,7 @@ namespace SUSFuckr
                 };
                 originalImages[gameIcon] = new Bitmap(gameIcon.Image);
                 gameIcon.Click += GameIcon_Click;
-                this.contentPanel.Controls.Add(gameIcon); // Dodaj do panelu
+                this.contentPanel.Controls.Add(gameIcon);
 
                 var labelGame = new Label
                 {
@@ -561,7 +534,7 @@ namespace SUSFuckr
                     Text = config.ModName,
                     TextAlign = ContentAlignment.TopCenter
                 };
-                this.contentPanel.Controls.Add(labelGame); // Dodaj do panelu
+                this.contentPanel.Controls.Add(labelGame);
             }
             catch (FileNotFoundException)
             {
@@ -577,7 +550,6 @@ namespace SUSFuckr
                 if (modConfig != null && btnDelete.Enabled)
                 {
                     ModDelete.DeleteMod(modConfig, modConfigs);
-                    // Odœwie¿ formularz po usuniêciu
                     UpdateFormDisplay(modConfig);
                 }
             }
@@ -587,23 +559,18 @@ namespace SUSFuckr
             }
         }
 
-
         private async void UpdateModButton_Click(object sender, EventArgs e)
         {
             if (selectedIcon != null)
             {
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
-
                 if (modConfig != null)
                 {
                     progressBar.Visible = true;
-                    progressBar.Style = ProgressBarStyle.Continuous; // Zmieñ na sta³y styl, by wyœwietlaæ postêp
-                    progressBar.Value = 0; // Zresetuj pasek postêpu
-
-                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel, Configuration); // Przekazanie Configuration
-                    progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu
-
-                    // Odœwie¿ formularz po aktualizacji
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    progressBar.Value = 0;
+                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel, Configuration);
+                    progressBar.Visible = false;
                     UpdateFormDisplay(modConfig);
                 }
                 else
@@ -627,7 +594,7 @@ namespace SUSFuckr
                 {
                     graphics.DrawImage(installedImage, new Rectangle(0, 0, installedImage.Width, installedImage.Height));
                 }
-                gameIcon.Refresh(); // Odœwie¿ dla pewnoœci wyœwietlenia
+                gameIcon.Refresh();
             }
         }
     }
