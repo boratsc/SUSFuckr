@@ -20,11 +20,13 @@ namespace SUSFuckr
         private readonly IConfiguration Configuration;
         private readonly string appVersion = string.Empty;  // Dodaj pole appVersion
 
+        private ToolTip toolTip;
+
         public MainForm()
         {
             InitializeComponent();
             CreateMenu();
-
+                toolTip = new ToolTip();
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
@@ -37,6 +39,8 @@ namespace SUSFuckr
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
+
+            toolTip = new ToolTip();
 
             modConfigs = ConfigManager.LoadConfig();
             Load += FormLoad;
@@ -70,6 +74,19 @@ namespace SUSFuckr
             ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
             menuStrip.Items.Add(infoMenuItem);
+
+            ToolStripMenuItem supportMenuItem = new ToolStripMenuItem("Donate na certyfikat");
+            supportMenuItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://liberapay.com/boracik/donate",
+                UseShellExecute = true
+            });
+
+            menuStrip.Items.Add(supportMenuItem);
+
+            // Ustawienie tooltipa na hover nad supportMenuItem
+            supportMenuItem.MouseHover += (s, ev) => toolTip.Show("Zbieram hajs, ¿eby Windows siê nie plu³, ¿e aplikacja jest niebezpieczna!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
+
 
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
@@ -155,7 +172,7 @@ namespace SUSFuckr
             if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath) && Directory.Exists(vanillaMod.InstallPath)) // Sprawdzenie czy Vanilla jest zainstalowane
             {
                 textBoxPath.Text = vanillaMod.InstallPath.Replace('/', '\\');
-                labelVersion.Text = "Wersja gry: " + vanillaMod.AmongVersion;
+                labelVersion.Text = "Wersja: " + vanillaMod.AmongVersion;
                 AddGameIcon(vanillaMod);  // Dodaj ikonê Vanilla
 
                 var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
@@ -171,12 +188,12 @@ namespace SUSFuckr
                 if (path != null)
                 {
                     textBoxPath.Text = path.Replace('/', '\\');
-                    labelVersion.Text = "Wersja gry: " + version;
+                    labelVersion.Text = "Wersja: " + version;
                 }
                 else
                 {
                     textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
-                    labelVersion.Text = "Wersja gry: Nieznana";
+                    labelVersion.Text = "Wersja: Nieznana";
                 }
 
                 if (vanillaMod == null)
@@ -212,7 +229,7 @@ namespace SUSFuckr
             if (modConfig != null)
             {
                 textBoxPath.Text = modConfig.InstallPath.Replace('/', '\\');
-                labelVersion.Text = "Wersja gry: " + modConfig.AmongVersion;
+                labelVersion.Text = "Wersja: " + modConfig.AmongVersion;
 
                 // SprawdŸ, czy mod jest zainstalowany i dodaj ikonê "installed.png"
                 if (!string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath))
@@ -241,7 +258,7 @@ namespace SUSFuckr
             else
             {
                 textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
-                labelVersion.Text = "Wersja gry: Nieznana";
+                labelVersion.Text = "Wersja: Nieznana";
                 btnLaunch.Enabled = false;
                 browseButton.Enabled = false;
                 btnModify.Enabled = false;
@@ -342,12 +359,12 @@ namespace SUSFuckr
             {
                 var exePath = Path.Combine(path, "Among Us.exe");
                 var versionInfo = FileVersionInfo.GetVersionInfo(exePath);
-                labelVersion.Text = "Wersja gry: " + versionInfo.FileVersion;
+                labelVersion.Text = "Wersja: " + versionInfo.FileVersion;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Nie uda³o siê odczytaæ wersji gry. " + ex.Message, "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                labelVersion.Text = "Wersja gry: Nieznana";
+                labelVersion.Text = "Wersja: Nieznana";
             }
         }
 
@@ -513,7 +530,7 @@ namespace SUSFuckr
                 else
                 {
                     MessageBox.Show("To nie wygl¹da na folder gry Among Us.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    labelVersion.Text = "Wersja gry: Nieznana";
+                    labelVersion.Text = "Wersja: Nieznana";
                 }
             }
         }
