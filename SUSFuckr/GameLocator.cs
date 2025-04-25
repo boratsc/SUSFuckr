@@ -11,6 +11,7 @@ namespace SUSFuckr
             Environment.ExpandEnvironmentVariables("%PROGRAMFILES%/Steam"),
             Environment.ExpandEnvironmentVariables("%LOCALAPPDATA%/Steam"),
             "D:/Steam",
+            "D:/",
             "D:/Gry/Steam"
         };
 
