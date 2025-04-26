@@ -53,5 +53,16 @@
         "ModVersion": "1.0.4",
         "LastUpdated": "2025-01-15T00:00:00",
         "AmongVersion": "ToU"
+    },
+    {
+        "ModName": "Town of Host",
+        "PngFileName": "generic.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/EnhancedNetwork/TownofHost-Enhanced/releases/download/v2.2.1b1/TOH-Enhanced-SteamEpic-2.2.1b1.zip",
+        "ModType": "full",
+        "DllInstallPath": null,
+        "ModVersion": "2.2.1 Beta 1",
+        "LastUpdated": "2025-02-08T00:00:00",
+        "AmongVersion": "16.0.2"
     }
 ]
