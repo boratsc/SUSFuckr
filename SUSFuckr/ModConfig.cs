@@ -6,15 +6,17 @@ namespace SUSFuckr
 {
     public class ModConfiguration
     {
-        public string ModName { get; set; } = string.Empty; // Inicjalizacja jako pusty string
+        public int Id { get; set; } // Dodajemy pole Id
+        public string ModName { get; set; } = string.Empty;
         public string PngFileName { get; set; } = string.Empty;
         public string InstallPath { get; set; } = string.Empty;
         public string? GitHubRepoOrLink { get; set; } = string.Empty;
-        public string ModType { get; set; } = string.Empty; // Mo¿e byæ "full" lub "dll"
-        public string? DllInstallPath { get; set; } // Mo¿e byæ null
+        public string ModType { get; set; } = string.Empty;
+        public string? DllInstallPath { get; set; }
         public string ModVersion { get; set; } = string.Empty;
-        public DateTime? LastUpdated { get; set; } = DateTime.Now; // Inicjalizacja do aktualnego czasu
+        public DateTime? LastUpdated { get; set; } = DateTime.Now;
         public string AmongVersion { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty; // Dodajemy pole Description
     }
 
     public static class ConfigManager
