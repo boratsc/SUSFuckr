@@ -22,25 +22,40 @@ namespace SUSFuckr
         private readonly IConfiguration Configuration;
         private readonly string appVersion = string.Empty;
         private ToolTip toolTip;
-        private readonly string currentVersion;
+        private Updater updater;
 
         public MainForm()
         {
             InitializeComponent();
-            CreateMenu();
-            toolTip = new ToolTip();
 
+            // Konfiguracja aplikacji
             var builder = new ConfigurationBuilder()
                 .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
             Configuration = builder.Build();
+
             appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1";
-            ModConfigHandler.Initialize(Configuration);
             Text = $"SUSFuckr - przyjazny instalator modów {appVersion}";
+
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
+
+            // Inicjalizacja ToolTip
+            toolTip = new ToolTip();
+
+            // Inicjalizacja updatera i sprawdzanie wersji 
+            updater = new Updater(appVersion);
+            updater.CheckAndPromptForUpdateAsync();
+
+            // Tworzenie menu
+            CreateMenu();
+
+            // Inicjalizacja konfiguracji modów
+            ModConfigHandler.Initialize(Configuration);
             modConfigs = ConfigManager.LoadConfig();
+
+            // Ustawienia layoutu itp.
             Load += FormLoad;
             progressLabel = new Label
             {
@@ -50,8 +65,9 @@ namespace SUSFuckr
                 Location = new Point(progressBar.Width / 2 - 50, progressBar.Height / 2 - 10),
             };
             progressBar.Controls.Add(progressLabel);
-            currentVersion = Configuration["Configuration:CurrentVersion"];
-            GameLocator.CheckAndSetupVanillaMod(modConfigs); // U¿ycie logiki z GameLocator
+
+            // Dodatkowe konfiguracje
+            GameLocator.CheckAndSetupVanillaMod(modConfigs);
         }
 
         private void CreateMenu()
@@ -111,53 +127,14 @@ namespace SUSFuckr
         }
 
 
-        public async Task CheckAndUpdateApplicationAsync()
-        {
-            string latestVersion = await GetLatestVersionAsync();
-            if (string.Compare(latestVersion, currentVersion) > 0)
-            {
-                MessageBox.Show($"Zaraz zaktualizujemy i zrestartujemy aplikacjê.\nObecna wersja: {currentVersion}\nNowa wersja: {latestVersion}", "Aktualizacja aplikacji", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                // Uruchom Updater.exe do przeprowadzenia aktualizacji
-                string updaterPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater", "updater.exe");
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = updaterPath,
-                    UseShellExecute = true,
-                    Arguments = $"\"{AppDomain.CurrentDomain.BaseDirectory.TrimEnd('\\')}\""
-                });
-
-                // Zamknij star¹ aplikacjê
-                Application.Exit();
-            }
-            else
-            {
-                MessageBox.Show("Masz ju¿ najnowsz¹ wersjê aplikacji.", "Aktualizacja aplikacji", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-        }
-
-        public async Task<string> GetLatestVersionAsync()
-        {
-            using (HttpClient client = new HttpClient())
-            {
-                HttpResponseMessage response = await client.GetAsync("https://susfuckr.boracik.pl/api/susfuckr-current-version");
-                response.EnsureSuccessStatusCode();
-                var content = await response.Content.ReadAsStringAsync();
-                var versionInfo = JsonSerializer.Deserialize<Dictionary<string, string>>(content);
-                return versionInfo["version"];
-            }
-        }
-
         private async void UpdateApplicationMenuItem_Click(object sender, EventArgs e)
         {
             try
             {
-                // Wywo³aj metodê do sprawdzania i aktualizacji wersji aplikacji
-                await CheckAndUpdateApplicationAsync();
+                await updater.CheckAndPromptForUpdateAsync(); // Poprawne u¿ycie kontekstu
             }
             catch (Exception ex)
             {
-                // W przypadku b³êdu podczas sprawdzania lub aktualizacji, wyœwietl komunikat
                 MessageBox.Show($"B³¹d podczas aktualizacji aplikacji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
