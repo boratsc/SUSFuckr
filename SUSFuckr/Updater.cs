@@ -32,7 +32,7 @@ namespace SUSFuckr
                 }
                 else
                 {
-                    MessageBox.Show("Masz ju¿ najnowsz¹ wersjê aplikacji.", "Aktualizacja aplikacji", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //MessageBox.Show("Masz ju¿ najnowsz¹ wersjê aplikacji.", "Aktualizacja aplikacji", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
