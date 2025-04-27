@@ -5,6 +5,8 @@
 		<Nullable>enable</Nullable>
 		<UseWindowsForms>true</UseWindowsForms>
 		<ImplicitUsings>enable</ImplicitUsings>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<SelfContained>true</SelfContained>
 		<ApplicationIcon>Graphics\icon.ico</ApplicationIcon>
 	</PropertyGroup>
 	<ItemGroup>

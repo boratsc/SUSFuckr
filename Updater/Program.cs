@@ -40,6 +40,9 @@ namespace Updater
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
                         Console.WriteLine($"Processing entry: {entry.FullName}");
+                        // Pomiń plik config.json
+                        if (entry.FullName.EndsWith("config.json")) continue;
+
                         if (entry.FullName.StartsWith("SUSFuckr/") && !entry.FullName.StartsWith("SUSFuckr/updater/"))
                         {
                             string relativePath = entry.FullName.Substring("SUSFuckr/".Length);
@@ -68,14 +71,12 @@ namespace Updater
                     string destFile = Path.Combine(targetDir, relativePath);
                     Console.WriteLine($"Kopiowanie {file} do {destFile}");
 
-                    // Bezpieczna konwersja destDir - użycie ?? do zarządzania potencjalnym nullem
                     string destDir = Path.GetDirectoryName(destFile) ?? string.Empty;
                     if (!string.IsNullOrEmpty(destDir) && !Directory.Exists(destDir))
                     {
                         Console.WriteLine($"Tworzenie katalogu: {destDir}");
                         Directory.CreateDirectory(destDir);
                     }
-
                     File.Copy(file, destFile, true);
                 }
 
@@ -89,7 +90,7 @@ namespace Updater
                         {
                             FileName = appExePath,
                             UseShellExecute = true,
-                            WorkingDirectory = targetDir // Określamy katalog roboczy
+                            WorkingDirectory = targetDir
                         });
                         Console.WriteLine("Aplikacja została uruchomiona pomyślnie.");
                     }
@@ -102,16 +103,13 @@ namespace Updater
                 {
                     Console.WriteLine("Plik wykonywalny nie istnieje: " + appExePath);
                 }
-
                 Console.WriteLine("Operacja zakończona. Naciśnij Enter, aby zakończyć.");
-
                 Directory.Delete(tempExtractPath, true);
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Update failed: {ex.Message}");
                 LogError(ex.ToString());
-
                 Console.WriteLine("Błąd operacji. Naciśnij Enter, aby zakończyć.");
                 Console.ReadLine();
             }
@@ -120,7 +118,7 @@ namespace Updater
         private static void LogError(string message)
         {
             // Logika zapisu błędów
-            // Możesz dodać logikę zapisu błędów do logu
+            // Możesz dodać logikę zapisu błędów do pliku logu
         }
     }
 }
