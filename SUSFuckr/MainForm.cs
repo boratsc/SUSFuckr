@@ -171,11 +171,12 @@ namespace SUSFuckr
 
         private void FormLoad(object? sender, EventArgs e)
         {
-            // ZnajdŸ istniej¹c¹ konfiguracjê dla "AmongUs"
-            var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs" && !string.IsNullOrEmpty(x.InstallPath));
+            modConfigs = ConfigManager.LoadConfig(); // £adujemy istniej¹ce konfiguracje
 
+            // ZnajdŸ istniej¹c¹ konfiguracjê dla "AmongUs"
+            var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
             // SprawdŸ równie¿, czy œcie¿ka zawiera plik "Among Us.exe"
-            if (vanillaMod != null && File.Exists(Path.Combine(vanillaMod.InstallPath, "Among Us.exe")))
+            if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath) && File.Exists(Path.Combine(vanillaMod.InstallPath, "Among Us.exe")))
             {
                 // Je¿eli wpis jest poprawny, wyœwietl jego informacje
                 textBoxPath.Text = vanillaMod.InstallPath.Replace('/', '\\');
@@ -185,6 +186,10 @@ namespace SUSFuckr
                 if (vanillaIcon != null)
                 {
                     AddInstalledIcon(vanillaIcon);
+                    if (!string.IsNullOrEmpty(vanillaMod.Description)) // Ustawienie tooltipa
+                    {
+                        toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
+                    }
                 }
             }
             else
@@ -196,12 +201,12 @@ namespace SUSFuckr
                 {
                     textBoxPath.Text = path.Replace('/', '\\');
                     labelVersion.Text = "Wersja: " + version;
-
                     // Dodaj now¹ konfiguracjê albo aktualizuj istniej¹cy wpis
                     if (vanillaMod == null)
                     {
                         vanillaMod = new ModConfiguration
                         {
+                            Id = 0, // Ustaw ID jako 0
                             ModName = "AmongUs",
                             PngFileName = "Vanilla.png",
                             InstallPath = path ?? string.Empty,
@@ -210,6 +215,7 @@ namespace SUSFuckr
                             DllInstallPath = null,
                             LastUpdated = null,
                             AmongVersion = version,
+                            Description = "Description for Among Us"
                         };
                         modConfigs.Add(vanillaMod);
                     }
@@ -218,22 +224,53 @@ namespace SUSFuckr
                         vanillaMod.InstallPath = path ?? string.Empty;
                         vanillaMod.AmongVersion = version;
                     }
-
                     ConfigManager.SaveConfig(modConfigs);
                     AddGameIcon(vanillaMod);
                     var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
                     if (vanillaIcon != null)
                     {
                         AddInstalledIcon(vanillaIcon);
+                        if (!string.IsNullOrEmpty(vanillaMod.Description))
+                        {
+                            toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
+                        }
                     }
                 }
                 else
                 {
                     textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
                     labelVersion.Text = "Wersja: Nieznana";
+
+                    // Dodaj konfiguracjê dla "Among Us" jeœli nie znaleziono
+                    if (vanillaMod == null)
+                    {
+                        vanillaMod = new ModConfiguration
+                        {
+                            Id = 0,
+                            ModName = "AmongUs",
+                            PngFileName = "Vanilla.png",
+                            InstallPath = "",
+                            GitHubRepoOrLink = null,
+                            ModType = "Vanilla",
+                            DllInstallPath = null,
+                            LastUpdated = null,
+                            AmongVersion = "Nieznana",
+                            Description = "Among Us game not found."
+                        };
+                        modConfigs.Add(vanillaMod);
+                        ConfigManager.SaveConfig(modConfigs);
+                    }
+                    AddGameIcon(vanillaMod);
+                    var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
+                    if (vanillaIcon != null)
+                    {
+                        if (!string.IsNullOrEmpty(vanillaMod.Description))
+                        {
+                            toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
+                        }
+                    }
                 }
             }
-
             // Konfiguruj komponenty modów niebêd¹cych "AmongUs"
             ConfigureModComponents(modConfigs.Where(x => x.ModName != "AmongUs").ToList());
         }
@@ -289,6 +326,8 @@ namespace SUSFuckr
             int iconWidth = 64;
             int offsetX = 10;
 
+            ToolTip toolTip = new ToolTip(); // Tworzenie nowego obiektu ToolTip
+
             foreach (var config in configs)
             {
                 try
@@ -304,8 +343,8 @@ namespace SUSFuckr
                             continue;
                         }
                     }
-
                     Console.WriteLine($"Dodaj ikonê dla: {config.ModName}, PngFileName: {config.PngFileName}");
+
                     var gameIcon = new PictureBox
                     {
                         Location = new Point(initialX, initialY),
@@ -318,10 +357,17 @@ namespace SUSFuckr
 
                     originalImages[gameIcon] = new Bitmap(gameIcon.Image);
 
+                    // Ustawienie tooltipa dla ikony
+                    if (!string.IsNullOrEmpty(config.Description))
+                    {
+                        toolTip.SetToolTip(gameIcon, config.Description);
+                    }
+
                     if (!string.IsNullOrEmpty(config.InstallPath) && Directory.Exists(config.InstallPath))
                     {
                         AddInstalledIcon(gameIcon);
                     }
+
                     gameIcon.Click += GameIcon_Click;
                     this.contentPanel.Controls.Add(gameIcon);
 
@@ -335,6 +381,7 @@ namespace SUSFuckr
                         Text = config.ModName,
                         TextAlign = ContentAlignment.TopCenter
                     };
+
                     this.contentPanel.Controls.Add(labelGame);
                     initialX += iconWidth + offsetX;
                 }

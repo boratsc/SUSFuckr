@@ -14,14 +14,15 @@ namespace SUSFuckr
 
             foreach (var newConfig in newConfigs)
             {
-                var existingConfig = existingConfigs.FirstOrDefault(c => c.ModName == newConfig.ModName);
-
-                if (existingConfig != null && string.IsNullOrEmpty(existingConfig.InstallPath))
+                var existingConfig = existingConfigs.FirstOrDefault(c => c.Id == newConfig.Id);
+                if (existingConfig != null)
                 {
+                    // Aktualizuj istniej¹c¹ konfiguracjê, pomijaj¹c InstallPath
                     UpdateExistingConfig(existingConfig, newConfig);
                 }
-                else if (existingConfig == null)
+                else
                 {
+                    // Dodaj now¹ konfiguracjê, jeœli nie istnieje
                     existingConfigs.Add(newConfig);
                 }
             }
@@ -32,13 +33,14 @@ namespace SUSFuckr
         private static void UpdateExistingConfig(ModConfiguration existingConfig, ModConfiguration newConfig)
         {
             existingConfig.PngFileName = newConfig.PngFileName;
-            existingConfig.InstallPath = newConfig.InstallPath;
+            // Pomijamy actualizacjê InstallPath
             existingConfig.GitHubRepoOrLink = newConfig.GitHubRepoOrLink;
             existingConfig.ModType = newConfig.ModType;
             existingConfig.DllInstallPath = newConfig.DllInstallPath;
             existingConfig.ModVersion = newConfig.ModVersion;
             existingConfig.LastUpdated = newConfig.LastUpdated;
             existingConfig.AmongVersion = newConfig.AmongVersion;
+            existingConfig.Description = newConfig.Description; // Aktualizujemy opis
         }
     }
 }
