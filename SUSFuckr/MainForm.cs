@@ -36,15 +36,13 @@ namespace SUSFuckr
 
             appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1";
             Text = $"SUSFuckr - przyjazny instalator modów {appVersion}";
-
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
 
-            // Inicjalizacja ToolTip
             toolTip = new ToolTip();
 
-            // Inicjalizacja updatera i sprawdzanie wersji 
+            // Inicjalizacja updatera i sprawdzanie wersji
             updater = new Updater(appVersion);
             updater.CheckAndPromptForUpdateAsync();
 
@@ -67,7 +65,7 @@ namespace SUSFuckr
             progressBar.Controls.Add(progressLabel);
 
             // Dodatkowe konfiguracje
-            GameLocator.CheckAndSetupVanillaMod(modConfigs);
+            GameLocator.CheckAndSetupVanillaMod(modConfigs, Configuration);
         }
 
         private void CreateMenu()
@@ -196,24 +194,58 @@ namespace SUSFuckr
             return;
         }
 
-        private void FormLoad(object? sender, EventArgs e)
+        private async void FormLoad(object? sender, EventArgs e)
         {
             modConfigs = ConfigManager.LoadConfig(); // £adujemy istniej¹ce konfiguracje
-
-            // ZnajdŸ istniej¹c¹ konfiguracjê dla "AmongUs"
             var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
-            // SprawdŸ równie¿, czy œcie¿ka zawiera plik "Among Us.exe"
-            if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath) && File.Exists(Path.Combine(vanillaMod.InstallPath, "Among Us.exe")))
+
+            // SprawdŸ wersjê gry
+            string mode = Configuration["Configuration:Mode"] ?? "steam"; // Default to steam
+            string? path = vanillaMod?.InstallPath;
+            path = path != null && File.Exists(Path.Combine(path, "Among Us.exe"))
+                ? path
+                : GameLocator.TryFindAmongUsPath(out mode);
+
+            // Aktualizuj konfiguracjê w zale¿noœci od znalezionej wersji
+            if (path != null)
             {
-                // Je¿eli wpis jest poprawny, wyœwietl jego informacje
-                textBoxPath.Text = vanillaMod.InstallPath.Replace('/', '\\');
-                labelVersion.Text = "Wersja: " + vanillaMod.AmongVersion;
+                Configuration["Configuration:Mode"] = mode;
+                var version = GetGameVersion(path);
+
+                textBoxPath.Text = path.Replace('/', '\\');
+                labelVersion.Text = "Wersja: " + version;
+
+                if (vanillaMod == null)
+                {
+                    vanillaMod = new ModConfiguration
+                    {
+                        Id = 0,
+                        ModName = "AmongUs",
+                        PngFileName = "Vanilla.png",
+                        InstallPath = path,
+                        GitHubRepoOrLink = null,
+                        ModType = "Vanilla",
+                        DllInstallPath = null,
+                        LastUpdated = null,
+                        AmongVersion = version,
+                        Description = $"Wykryto wersjê {mode}"
+                    };
+                    modConfigs.Add(vanillaMod);
+                }
+                else
+                {
+                    vanillaMod.InstallPath = path;
+                    vanillaMod.AmongVersion = version;
+                    vanillaMod.Description = $"Wykryto wersjê {mode}";
+                }
+
+                ConfigManager.SaveConfig(modConfigs);
                 AddGameIcon(vanillaMod);
                 var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
                 if (vanillaIcon != null)
                 {
                     AddInstalledIcon(vanillaIcon);
-                    if (!string.IsNullOrEmpty(vanillaMod.Description)) // Ustawienie tooltipa
+                    if (!string.IsNullOrEmpty(vanillaMod.Description))
                     {
                         toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
                     }
@@ -221,84 +253,65 @@ namespace SUSFuckr
             }
             else
             {
-                // Jeœli wpis nie jest poprawny, spróbuj znaleŸæ Among Us w znanych lokalizacjach
-                var path = GameLocator.TryFindAmongUsPath();
-                var version = path != null ? GetGameVersion(path) : "Nieznana";
-                if (path != null)
+                textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
+                labelVersion.Text = "Wersja: Nieznana";
+                if (vanillaMod == null)
                 {
-                    textBoxPath.Text = path.Replace('/', '\\');
-                    labelVersion.Text = "Wersja: " + version;
-                    // Dodaj now¹ konfiguracjê albo aktualizuj istniej¹cy wpis
-                    if (vanillaMod == null)
+                    vanillaMod = new ModConfiguration
                     {
-                        vanillaMod = new ModConfiguration
-                        {
-                            Id = 0, // Ustaw ID jako 0
-                            ModName = "AmongUs",
-                            PngFileName = "Vanilla.png",
-                            InstallPath = path ?? string.Empty,
-                            GitHubRepoOrLink = null,
-                            ModType = "Vanilla",
-                            DllInstallPath = null,
-                            LastUpdated = null,
-                            AmongVersion = version,
-                            Description = "Description for Among Us"
-                        };
-                        modConfigs.Add(vanillaMod);
-                    }
-                    else
-                    {
-                        vanillaMod.InstallPath = path ?? string.Empty;
-                        vanillaMod.AmongVersion = version;
-                    }
+                        Id = 0,
+                        ModName = "AmongUs",
+                        PngFileName = "Vanilla.png",
+                        InstallPath = "",
+                        GitHubRepoOrLink = null,
+                        ModType = "Vanilla",
+                        DllInstallPath = null,
+                        LastUpdated = null,
+                        AmongVersion = "Nieznana",
+                        Description = "Nie znaleziono Among Us.exe."
+                    };
+                    modConfigs.Add(vanillaMod);
                     ConfigManager.SaveConfig(modConfigs);
-                    AddGameIcon(vanillaMod);
-                    var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
-                    if (vanillaIcon != null)
-                    {
-                        AddInstalledIcon(vanillaIcon);
-                        if (!string.IsNullOrEmpty(vanillaMod.Description))
-                        {
-                            toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
-                        }
-                    }
                 }
-                else
+                AddGameIcon(vanillaMod);
+                var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
+                if (vanillaIcon != null)
                 {
-                    textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
-                    labelVersion.Text = "Wersja: Nieznana";
-
-                    // Dodaj konfiguracjê dla "Among Us" jeœli nie znaleziono
-                    if (vanillaMod == null)
+                    if (!string.IsNullOrEmpty(vanillaMod.Description))
                     {
-                        vanillaMod = new ModConfiguration
-                        {
-                            Id = 0,
-                            ModName = "AmongUs",
-                            PngFileName = "Vanilla.png",
-                            InstallPath = "",
-                            GitHubRepoOrLink = null,
-                            ModType = "Vanilla",
-                            DllInstallPath = null,
-                            LastUpdated = null,
-                            AmongVersion = "Nieznana",
-                            Description = "Among Us game not found."
-                        };
-                        modConfigs.Add(vanillaMod);
-                        ConfigManager.SaveConfig(modConfigs);
-                    }
-                    AddGameIcon(vanillaMod);
-                    var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
-                    if (vanillaIcon != null)
-                    {
-                        if (!string.IsNullOrEmpty(vanillaMod.Description))
-                        {
-                            toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
-                        }
+                        toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
                     }
                 }
             }
-            // Konfiguruj komponenty modów niebêd¹cych "AmongUs"
+
+            // Pobranie legendary.exe dla wersji Epic
+            if (mode == "epic" && !File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.exe")))
+            {
+                try
+                {
+                    string legendaryUrl = "https://github.com/derrod/legendary/releases/latest/download/legendary.exe";
+                    string legendaryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.exe");
+
+                    using (HttpClient client = new HttpClient())
+                    {
+                        HttpResponseMessage response = await client.GetAsync(legendaryUrl);
+                        response.EnsureSuccessStatusCode();
+                        using (var fs = new FileStream(legendaryPath, FileMode.Create, FileAccess.Write))
+                        {
+                            await response.Content.CopyToAsync(fs);
+                        }
+                    }
+                    // Komunikat "informacyjny" po pomyœlnym pobraniu
+                    MessageBox.Show("Program legendary.exe dla wersji Epic zosta³ pobrany pomyœlnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                // Komunikat "b³êdu" przy niepowodzeniu pobrania
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Wyst¹pi³ b³¹d podczas pobierania programu legendary.exe: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            
+
             ConfigureModComponents(modConfigs.Where(x => x.ModName != "AmongUs").ToList());
         }
 
