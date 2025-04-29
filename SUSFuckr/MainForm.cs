@@ -94,20 +94,26 @@ namespace SUSFuckr
 
             additionalActionsMenuItem.DropDownItems.Add(touConfigItem);
 
-            ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw czarny ekran");
-            fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
-            additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
+
 
             ToolStripMenuItem updateConfigItem = new ToolStripMenuItem("Aktualizuj konfiguracjê");
             updateConfigItem.Click += new EventHandler(UpdateConfigMenuItem_Click);
+            updateConfigItem.MouseHover += (s, ev) => toolTip.Show("Pobiera najnowsz¹ wersjê konfiguracji z serwera (np. aktualizacjê modów)", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             additionalActionsMenuItem.DropDownItems.Add(updateConfigItem);
 
             // Dodanie opcji "Aktualizuj aplikacjê"
             ToolStripMenuItem updateApplicationItem = new ToolStripMenuItem("Aktualizuj aplikacjê");
             updateApplicationItem.Click += new EventHandler(UpdateApplicationMenuItem_Click);
+            updateApplicationItem.MouseHover += (s, ev) => toolTip.Show("Pobiera najnowsz¹ wersjê aplikacji", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             additionalActionsMenuItem.DropDownItems.Add(updateApplicationItem);
 
             menuStrip.Items.Add(additionalActionsMenuItem);
+
+            ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw Amonga");
+            fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
+            fixBlackScreenItem.MouseHover += (s, ev) => toolTip.Show("Naprawia czarny ekran, problemy z komunikacj¹, \nsprawia, ¿e jest pokój na œwiecie, ale wywala prawie ca³¹ konfiguracjê!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
+            //additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
+            menuStrip.Items.Add(fixBlackScreenItem);
 
             ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
@@ -121,6 +127,8 @@ namespace SUSFuckr
             });
             supportMenuItem.MouseHover += (s, ev) => toolTip.Show("Zbieram hajs, ¿eby Windows siê nie plu³, ¿e aplikacja jest niebezpieczna!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             menuStrip.Items.Add(supportMenuItem);
+
+
 
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);

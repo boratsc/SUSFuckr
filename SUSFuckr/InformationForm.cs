@@ -90,7 +90,7 @@ namespace SUSFuckr
 
             Button returnButton = new Button
             {
-                Text = "Wróæ",
+                Text = "Zamknij",
                 AutoSize = true,
                 Location = new Point((socialPanel.Width - 120) / 2, 50),
             };
