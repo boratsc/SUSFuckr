@@ -239,8 +239,8 @@ namespace SUSFuckr
                 }
                 else if (comboBox.SelectedIndex >= 0)
                 {
-                    var selectedItem = comboBox.SelectedItem.ToString();
-                    hash = selectedItem.Split('-').Last().Trim(); // Wyci¹gnij tylko hash
+                    var selectedItem = comboBox?.SelectedItem?.ToString();
+                    hash = selectedItem?.Split('-').Last().Trim(); // Wyci¹gnij tylko hash
                 }
 
                 form.DialogResult = DialogResult.OK;

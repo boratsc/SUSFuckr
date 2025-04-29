@@ -68,19 +68,19 @@ namespace SUSFuckr
 
         public static void CheckAndSetupVanillaMod(List<ModConfiguration> modConfigs, IConfiguration configuration)
         {
-            // ZnajdŸ istniej¹c¹ konfiguracjê dla "AmongUs" z poprawn¹ œcie¿k¹
             var existingConfig = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs" &&
-                                                                !string.IsNullOrEmpty(x.InstallPath) &&
-                                                                File.Exists(Path.Combine(x.InstallPath, "Among Us.exe")));
-            if (existingConfig != null)
+                                                                x.Id == 0 &&
+                                                                !string.IsNullOrEmpty(x.InstallPath));
+
+            string currentMode = configuration["Configuration:Mode"] ?? "steam";
+
+            if (existingConfig != null && currentMode == "epic")
             {
-                Console.WriteLine("Among Us ju¿ zainstalowano z poprawn¹ konfiguracj¹.");
+                Console.WriteLine("Among Us ju¿ zainstalowano z wersj¹ Vanilla dla Epic.");
                 return;
             }
 
-            // Spróbuj znaleŸæ Among Us w znanych lokalizacjach
-            string? foundPath = TryFindAmongUsPath(out string? mode);
-
+            string? foundPath = TryFindAmongUsPath(out string? detectedMode);
             if (foundPath == null)
             {
                 MessageBox.Show("Nie znaleziono podstawowej wersji Among Us. Proszê wskazaæ folder rêcznie poprzez \"Przegl¹daj\".", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -88,12 +88,11 @@ namespace SUSFuckr
             }
 
             // Ustaw tryb w konfiguracji
-            if (mode != null)
+            if (detectedMode != null)
             {
-                configuration["Configuration:Mode"] = mode;
+                configuration["Configuration:Mode"] = detectedMode;
             }
 
-            // Dodaj poprawn¹ konfiguracjê moda
             var vanillaMod = new ModConfiguration
             {
                 ModName = "AmongUs",
@@ -105,14 +104,16 @@ namespace SUSFuckr
                 ModVersion = "",
                 LastUpdated = null,
                 AmongVersion = GetGameVersion(foundPath),
-                Description = $"Detected as {mode}"
+                Description = $"Detected as {detectedMode}"
             };
+
             modConfigs.Add(vanillaMod);
             ConfigManager.SaveConfig(modConfigs);
-            if (mode != null)
+
+            if (detectedMode != null)
             {
-                configuration["Configuration:Mode"] = mode;
-                ConfigManager.SaveConfigurationSetting("Mode", mode);
+                configuration["Configuration:Mode"] = detectedMode;
+                ConfigManager.SaveConfigurationSetting("Mode", detectedMode);
             }
         }
 

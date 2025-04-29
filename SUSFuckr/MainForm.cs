@@ -514,28 +514,40 @@ namespace SUSFuckr
             }
         }
 
-        private void LaunchButton_Click(object sender, EventArgs e)
+        private async void LaunchButton_Click(object sender, EventArgs e)
         {
             if (selectedIcon != null)
             {
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
+
                 if (modConfig != null)
                 {
-                    var exePath = Path.Combine(modConfig.InstallPath, "Among Us.exe");
-                    if (File.Exists(exePath))
+                    string mode = Configuration["Configuration:Mode"] ?? "steam";
+
+                    if (mode == "epic")
                     {
-                        try
-                        {
-                            Process.Start(exePath);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Failed to launch game: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
+                        var epicManager = new EpicVersionManager();
+                        await epicManager.HandleEpicGameAsync(modConfig);
                     }
-                    else
+                    else // Obs³uga dla Steam i Vanilla
                     {
-                        MessageBox.Show("Nie znaleziono pliku Among Us.exe w wybranej œcie¿ce.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        var exePath = Path.Combine(modConfig.InstallPath, "Among Us.exe");
+
+                        if (File.Exists(exePath))
+                        {
+                            try
+                            {
+                                Process.Start(exePath);
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"Failed to launch game: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                        else
+                        {
+                            MessageBox.Show("Nie znaleziono pliku Among Us.exe w wybranej œcie¿ce.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
                     }
                 }
                 else
@@ -556,14 +568,25 @@ namespace SUSFuckr
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
                 if (modConfig != null)
                 {
-                    ModManager manager = new ModManager(Configuration);
+                    string mode = Configuration["Configuration:Mode"] ?? "steam"; // Default to steam
                     bool modificationSuccess = false;
+                    progressBar.Visible = true;
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    progressLabel.Visible = true;
                     if (modConfig.ModType == "full")
                     {
-                        progressBar.Visible = true;
-                        progressBar.Style = ProgressBarStyle.Continuous;
-                        await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel);
-                        modificationSuccess = true;
+                        if (mode == "steam")
+                        {
+                            ModManager manager = new ModManager(Configuration);
+                            await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel, mode);
+                            modificationSuccess = true;
+                        }
+                        else if (mode == "epic")
+                        {
+                            EpicVersionManager epicManager = new EpicVersionManager();
+                            await epicManager.ModifyEpicAsync(modConfig, progressBar, progressLabel);
+                            modificationSuccess = true;
+                        }
                     }
                     else if (modConfig.ModType == "dll")
                     {
@@ -572,17 +595,20 @@ namespace SUSFuckr
                         if (modSelector.ShowDialog() == DialogResult.OK)
                         {
                             var selectedMods = modSelector.SelectedMods;
-                            progressBar.Visible = true;
+                            ModManager manager = new ModManager(Configuration);
                             await manager.ModifyDllAsync(modConfig, selectedMods, progressBar, progressLabel);
                             modificationSuccess = true;
                         }
                     }
+
                     progressBar.Visible = false;
                     progressLabel.Visible = false;
+
                     if (modificationSuccess)
                     {
+                        // Zaktualizuj UI i ikonê tylko po zakoñczeniu zadania
                         UpdateFormDisplay(modConfig);
-                        RefreshSingleIcon(selectedIcon);  // Odœwie¿ tylko wybran¹ ikonê
+                        RefreshSingleIcon(selectedIcon);
                     }
                 }
                 else
@@ -734,10 +760,12 @@ namespace SUSFuckr
                     progressBar.Visible = true;
                     progressBar.Style = ProgressBarStyle.Continuous;
                     progressBar.Value = 0;
-                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel, Configuration);
+
+                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel, Configuration); // U¿yj Configuration jako pi¹tego argumentu
+
                     progressBar.Visible = false;
                     UpdateFormDisplay(modConfig);
-                    RefreshSingleIcon(selectedIcon);  // Odœwie¿ tylko wybran¹ ikonê
+                    RefreshSingleIcon(selectedIcon);
                 }
                 else
                 {
