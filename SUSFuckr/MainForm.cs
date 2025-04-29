@@ -175,24 +175,7 @@ namespace SUSFuckr
 
         private void InfoMenuItem_Click(object? sender, EventArgs e)
         {
-            ShowInfoOverlay();
-        }
-
-        private void ShowInfoOverlay()
-        {
-            contentPanel.Visible = false;
-            overlayPanel = Information.CreateInfoOverlay(this, appVersion, RemoveInfoOverlay);
-            this.Controls.Add(overlayPanel);
-            overlayPanel.BringToFront();
-        }
-
-        private void RemoveInfoOverlay()
-        {
-            if (overlayPanel != null)
-            {
-                this.Controls.Remove(overlayPanel);
-                contentPanel.Visible = true;
-            }
+            Information.ShowInfoWindow(appVersion);
         }
 
         private void FixBlackScreenMenuItem_Click(object? sender, EventArgs e)
