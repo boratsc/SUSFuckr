@@ -2,32 +2,26 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Net.Http;
-using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace Updater
 {
     public class Program
     {
-        static async Task Main(string[] args)
+        static void Main(string[] args)
         {
-            string targetDir = args.Length > 0 ? args[0] : Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, ".."));
-            string tempFilePath = Path.Combine(Path.GetTempPath(), "LatestVersion.zip");
+            if (args.Length < 2)
+            {
+                Console.WriteLine("Usage: Updater <target-dir> <zip-file-path>");
+                return;
+            }
+
+            string targetDir = args[0];
+            string tempFilePath = args[1];
             string tempExtractPath = Path.Combine(Path.GetTempPath(), "LatestVersionExtract");
 
             try
             {
-                using (HttpClient client = new HttpClient())
-                {
-                    Console.WriteLine("Pobieranie najnowszej wersji...");
-                    HttpResponseMessage response = await client.GetAsync("https://susfuckr.boracik.pl/api/download-latest");
-                    response.EnsureSuccessStatusCode();
-                    using (FileStream fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
-                    {
-                        await response.Content.CopyToAsync(fs);
-                    }
-                }
-
                 Console.WriteLine("Rozpakowywanie archiwum ZIP...");
                 if (Directory.Exists(tempExtractPath))
                 {
@@ -40,10 +34,14 @@ namespace Updater
                     foreach (ZipArchiveEntry entry in archive.Entries)
                     {
                         Console.WriteLine($"Processing entry: {entry.FullName}");
-                        // Pomiń plik config.json
-                        if (entry.FullName.EndsWith("config.json")) continue;
 
-                        if (entry.FullName.StartsWith("SUSFuckr/") && !entry.FullName.StartsWith("SUSFuckr/updater/"))
+                        // Pomijanie config.json
+                        if (entry.FullName.EndsWith("config.json") || entry.FullName.StartsWith("SUSFuckr/updater/"))
+                        {
+                            continue;
+                        }
+
+                        if (entry.FullName.StartsWith("SUSFuckr/"))
                         {
                             string relativePath = entry.FullName.Substring("SUSFuckr/".Length);
                             string destinationPath = Path.Combine(tempExtractPath, relativePath);
@@ -61,9 +59,7 @@ namespace Updater
                         }
                     }
                 }
-                File.Delete(tempFilePath);
 
-                Console.WriteLine("Docelowa ścieżka: " + targetDir);
                 Console.WriteLine("Instalowanie nowej wersji...");
                 foreach (string file in Directory.GetFiles(tempExtractPath, "*", SearchOption.AllDirectories))
                 {
@@ -103,22 +99,17 @@ namespace Updater
                 {
                     Console.WriteLine("Plik wykonywalny nie istnieje: " + appExePath);
                 }
-                Console.WriteLine("Operacja zakończona. Naciśnij Enter, aby zakończyć.");
+
+                Console.WriteLine("Usuwanie tymczasowych plików...");
                 Directory.Delete(tempExtractPath, true);
+                File.Delete(tempFilePath);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Update failed: {ex.Message}");
-                LogError(ex.ToString());
-                Console.WriteLine("Błąd operacji. Naciśnij Enter, aby zakończyć.");
+                Console.WriteLine($"Uaktualnienie nie powiodło się: {ex.Message}");
+                Console.WriteLine("Naciśnij Enter, aby zakończyć.");
                 Console.ReadLine();
             }
-        }
-
-        private static void LogError(string message)
-        {
-            // Logika zapisu błędów
-            // Możesz dodać logikę zapisu błędów do pliku logu
         }
     }
 }
