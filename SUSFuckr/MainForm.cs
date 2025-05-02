@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -10,6 +10,7 @@ using System.Net.Http;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json; // Dla JsonSerializer
 using System.IO.Compression; // Dla ZipFile
+
 
 namespace SUSFuckr
 {
@@ -23,6 +24,8 @@ namespace SUSFuckr
         private readonly string appVersion = string.Empty;
         private ToolTip toolTip;
         private Updater updater;
+        private ModConfiguration selectedModConfig;
+       
 
         public MainForm()
         {
@@ -35,23 +38,21 @@ namespace SUSFuckr
             Configuration = builder.Build();
 
             appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1";
-            Text = $"SUSFuckr - przyjazny instalator modów {appVersion}";
-
+            Text = $"SUSFuckr - przyjazny instalator modÃ³w {appVersion}";
             Width = 640;
             Height = 520;
             Icon = new Icon("Graphics/icon.ico");
 
-            // Inicjalizacja ToolTip
             toolTip = new ToolTip();
 
-            // Inicjalizacja updatera i sprawdzanie wersji 
+            // Inicjalizacja updatera i sprawdzanie wersji
             updater = new Updater(appVersion);
             updater.CheckAndPromptForUpdateAsync();
 
             // Tworzenie menu
             CreateMenu();
 
-            // Inicjalizacja konfiguracji modów
+            // Inicjalizacja konfiguracji modÃ³w
             ModConfigHandler.Initialize(Configuration);
             modConfigs = ConfigManager.LoadConfig();
 
@@ -67,7 +68,34 @@ namespace SUSFuckr
             progressBar.Controls.Add(progressLabel);
 
             // Dodatkowe konfiguracje
-            GameLocator.CheckAndSetupVanillaMod(modConfigs);
+            GameLocator.CheckAndSetupVanillaMod(modConfigs, Configuration);
+        }
+
+
+        public class OutputForm : Form
+        {
+            private TextBox outputTextBox;
+
+            public OutputForm()
+            {
+                outputTextBox = new TextBox
+                {
+                    Multiline = true,
+                    ScrollBars = ScrollBars.Vertical,
+                    Dock = DockStyle.Fill
+                };
+                this.Controls.Add(outputTextBox);
+                this.Size = new Size(600, 400); // Rozmiar okna
+            }
+
+            // Metoda do aktualizacji zawartoÅ›ci TextBox
+            public void AppendText(string text)
+            {
+                outputTextBox.Invoke((MethodInvoker)delegate
+                {
+                    outputTextBox.AppendText(text + Environment.NewLine);
+                });
+            }
         }
 
         private void CreateMenu()
@@ -94,20 +122,26 @@ namespace SUSFuckr
 
             additionalActionsMenuItem.DropDownItems.Add(touConfigItem);
 
-            ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw czarny ekran");
-            fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
-            additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
 
-            ToolStripMenuItem updateConfigItem = new ToolStripMenuItem("Aktualizuj konfiguracjê");
+
+            ToolStripMenuItem updateConfigItem = new ToolStripMenuItem("Aktualizuj konfiguracjÄ™");
             updateConfigItem.Click += new EventHandler(UpdateConfigMenuItem_Click);
+            updateConfigItem.MouseHover += (s, ev) => toolTip.Show("Pobiera najnowszÄ… wersjÄ™ konfiguracji z serwera (np. aktualizacjÄ™ modÃ³w)", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             additionalActionsMenuItem.DropDownItems.Add(updateConfigItem);
 
-            // Dodanie opcji "Aktualizuj aplikacjê"
-            ToolStripMenuItem updateApplicationItem = new ToolStripMenuItem("Aktualizuj aplikacjê");
+            // Dodanie opcji "Aktualizuj aplikacjÄ™"
+            ToolStripMenuItem updateApplicationItem = new ToolStripMenuItem("Aktualizuj aplikacjÄ™");
             updateApplicationItem.Click += new EventHandler(UpdateApplicationMenuItem_Click);
+            updateApplicationItem.MouseHover += (s, ev) => toolTip.Show("Pobiera najnowszÄ… wersjÄ™ aplikacji", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             additionalActionsMenuItem.DropDownItems.Add(updateApplicationItem);
 
             menuStrip.Items.Add(additionalActionsMenuItem);
+
+            ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw Amonga");
+            fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
+            fixBlackScreenItem.MouseHover += (s, ev) => toolTip.Show("Naprawia czarny ekran, problemy z komunikacjÄ…, \nsprawia, Å¼e jest pokÃ³j na Å›wiecie, ale wywala prawie caÅ‚Ä… konfiguracjÄ™!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
+            //additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
+            menuStrip.Items.Add(fixBlackScreenItem);
 
             ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
@@ -119,8 +153,10 @@ namespace SUSFuckr
                 FileName = "https://liberapay.com/boracik/donate",
                 UseShellExecute = true
             });
-            supportMenuItem.MouseHover += (s, ev) => toolTip.Show("Zbieram hajs, ¿eby Windows siê nie plu³, ¿e aplikacja jest niebezpieczna!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
+            supportMenuItem.MouseHover += (s, ev) => toolTip.Show("Zbieram hajs, Å¼eby Windows siÄ™ nie pluÅ‚, Å¼e aplikacja jest niebezpieczna!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             menuStrip.Items.Add(supportMenuItem);
+
+
 
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
@@ -131,15 +167,32 @@ namespace SUSFuckr
         {
             try
             {
-                await updater.CheckAndPromptForUpdateAsync(); // Poprawne u¿ycie kontekstu
+                await updater.CheckAndPromptForUpdateAsync(); // Poprawne uÅ¼ycie kontekstu
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"B³¹d podczas aktualizacji aplikacji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"BÅ‚Ä…d podczas aktualizacji aplikacji: {ex.Message}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
+        private async Task ModifyEpicAndUpdateUI(ModConfiguration oldConfig)
+        {
+            var epicManager = new EpicVersionManager();
+            await epicManager.ModifyEpicAsync(oldConfig, progressBar, progressLabel);
 
+            // ZaÅ‚aduj nowy config z pliku (waÅ¼ne!)
+            modConfigs = ConfigManager.LoadConfig();
+
+            // ZnajdÅº nowy obiekt odpowiadajÄ…cy staremu
+            var updatedConfig = modConfigs.FirstOrDefault(c => c.Id == oldConfig.Id);
+            if (updatedConfig != null)
+            {
+                selectedModConfig = updatedConfig;
+                UpdateFormDisplay(updatedConfig); //  przyciski i ikonki bazujÄ… na aktualnym stanie
+                RefreshSingleIcon(selectedIcon);
+                RestartApplication();
+            }
+        }
 
         private async void UpdateConfigMenuItem_Click(object? sender, EventArgs e)
         {
@@ -157,12 +210,12 @@ namespace SUSFuckr
                 }
                 ConfigUpdater.CompareAndMergeConfigurations(tempFilePath);
                 File.Delete(tempFilePath);
-                MessageBox.Show("Konfiguracja zosta³a zaktualizowana. Aplikacja zostanie teraz ponownie uruchomiona.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Konfiguracja zostaÅ‚a zaktualizowana. Aplikacja zostanie teraz ponownie uruchomiona.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 RestartApplication();
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"B³¹d podczas aktualizacji konfiguracji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"BÅ‚Ä…d podczas aktualizacji konfiguracji: {ex.Message}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -175,24 +228,7 @@ namespace SUSFuckr
 
         private void InfoMenuItem_Click(object? sender, EventArgs e)
         {
-            ShowInfoOverlay();
-        }
-
-        private void ShowInfoOverlay()
-        {
-            contentPanel.Visible = false;
-            overlayPanel = Information.CreateInfoOverlay(this, appVersion, RemoveInfoOverlay);
-            this.Controls.Add(overlayPanel);
-            overlayPanel.BringToFront();
-        }
-
-        private void RemoveInfoOverlay()
-        {
-            if (overlayPanel != null)
-            {
-                this.Controls.Remove(overlayPanel);
-                contentPanel.Visible = true;
-            }
+            Information.ShowInfoWindow(appVersion);
         }
 
         private void FixBlackScreenMenuItem_Click(object? sender, EventArgs e)
@@ -205,24 +241,58 @@ namespace SUSFuckr
             return;
         }
 
-        private void FormLoad(object? sender, EventArgs e)
+        private async void FormLoad(object? sender, EventArgs e)
         {
-            modConfigs = ConfigManager.LoadConfig(); // £adujemy istniej¹ce konfiguracje
-
-            // ZnajdŸ istniej¹c¹ konfiguracjê dla "AmongUs"
+            modConfigs = ConfigManager.LoadConfig(); // Åadujemy istniejÄ…ce konfiguracje
             var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
-            // SprawdŸ równie¿, czy œcie¿ka zawiera plik "Among Us.exe"
-            if (vanillaMod != null && !string.IsNullOrEmpty(vanillaMod.InstallPath) && File.Exists(Path.Combine(vanillaMod.InstallPath, "Among Us.exe")))
+
+            // SprawdÅº wersjÄ™ gry
+            string mode = Configuration["Configuration:Mode"] ?? "steam"; // Default to steam
+            string? path = vanillaMod?.InstallPath;
+            path = path != null && File.Exists(Path.Combine(path, "Among Us.exe"))
+                ? path
+                : GameLocator.TryFindAmongUsPath(out mode);
+
+            // Aktualizuj konfiguracjÄ™ w zaleÅ¼noÅ›ci od znalezionej wersji
+            if (path != null)
             {
-                // Je¿eli wpis jest poprawny, wyœwietl jego informacje
-                textBoxPath.Text = vanillaMod.InstallPath.Replace('/', '\\');
-                labelVersion.Text = "Wersja: " + vanillaMod.AmongVersion;
+                Configuration["Configuration:Mode"] = mode;
+                var version = GetGameVersion(path);
+
+                textBoxPath.Text = path.Replace('/', '\\');
+                labelVersion.Text = "Wersja: " + version;
+
+                if (vanillaMod == null)
+                {
+                    vanillaMod = new ModConfiguration
+                    {
+                        Id = 0,
+                        ModName = "AmongUs",
+                        PngFileName = "Vanilla.png",
+                        InstallPath = path,
+                        GitHubRepoOrLink = null,
+                        ModType = "Vanilla",
+                        DllInstallPath = null,
+                        LastUpdated = null,
+                        AmongVersion = version,
+                        Description = $"Wykryto wersjÄ™ {mode}"
+                    };
+                    modConfigs.Add(vanillaMod);
+                }
+                else
+                {
+                    vanillaMod.InstallPath = path;
+                    vanillaMod.AmongVersion = version;
+                    vanillaMod.Description = $"Wykryto wersjÄ™ {mode}";
+                }
+
+                ConfigManager.SaveConfig(modConfigs);
                 AddGameIcon(vanillaMod);
                 var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
                 if (vanillaIcon != null)
                 {
                     AddInstalledIcon(vanillaIcon);
-                    if (!string.IsNullOrEmpty(vanillaMod.Description)) // Ustawienie tooltipa
+                    if (!string.IsNullOrEmpty(vanillaMod.Description))
                     {
                         toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
                     }
@@ -230,84 +300,68 @@ namespace SUSFuckr
             }
             else
             {
-                // Jeœli wpis nie jest poprawny, spróbuj znaleŸæ Among Us w znanych lokalizacjach
-                var path = GameLocator.TryFindAmongUsPath();
-                var version = path != null ? GetGameVersion(path) : "Nieznana";
-                if (path != null)
+                textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
+                labelVersion.Text = "Wersja: Nieznana";
+                if (vanillaMod == null)
                 {
-                    textBoxPath.Text = path.Replace('/', '\\');
-                    labelVersion.Text = "Wersja: " + version;
-                    // Dodaj now¹ konfiguracjê albo aktualizuj istniej¹cy wpis
-                    if (vanillaMod == null)
+                    vanillaMod = new ModConfiguration
                     {
-                        vanillaMod = new ModConfiguration
-                        {
-                            Id = 0, // Ustaw ID jako 0
-                            ModName = "AmongUs",
-                            PngFileName = "Vanilla.png",
-                            InstallPath = path ?? string.Empty,
-                            GitHubRepoOrLink = null,
-                            ModType = "Vanilla",
-                            DllInstallPath = null,
-                            LastUpdated = null,
-                            AmongVersion = version,
-                            Description = "Description for Among Us"
-                        };
-                        modConfigs.Add(vanillaMod);
-                    }
-                    else
-                    {
-                        vanillaMod.InstallPath = path ?? string.Empty;
-                        vanillaMod.AmongVersion = version;
-                    }
+                        Id = 0,
+                        ModName = "AmongUs",
+                        PngFileName = "Vanilla.png",
+                        InstallPath = "",
+                        GitHubRepoOrLink = null,
+                        ModType = "Vanilla",
+                        DllInstallPath = null,
+                        LastUpdated = null,
+                        AmongVersion = "Nieznana",
+                        Description = "Nie znaleziono Among Us.exe."
+                    };
+                    modConfigs.Add(vanillaMod);
                     ConfigManager.SaveConfig(modConfigs);
-                    AddGameIcon(vanillaMod);
-                    var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
-                    if (vanillaIcon != null)
-                    {
-                        AddInstalledIcon(vanillaIcon);
-                        if (!string.IsNullOrEmpty(vanillaMod.Description))
-                        {
-                            toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
-                        }
-                    }
                 }
-                else
+                AddGameIcon(vanillaMod);
+                var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
+                if (vanillaIcon != null)
                 {
-                    textBoxPath.Text = "Nie znaleziono Among Us automatycznie.";
-                    labelVersion.Text = "Wersja: Nieznana";
-
-                    // Dodaj konfiguracjê dla "Among Us" jeœli nie znaleziono
-                    if (vanillaMod == null)
+                    if (!string.IsNullOrEmpty(vanillaMod.Description))
                     {
-                        vanillaMod = new ModConfiguration
-                        {
-                            Id = 0,
-                            ModName = "AmongUs",
-                            PngFileName = "Vanilla.png",
-                            InstallPath = "",
-                            GitHubRepoOrLink = null,
-                            ModType = "Vanilla",
-                            DllInstallPath = null,
-                            LastUpdated = null,
-                            AmongVersion = "Nieznana",
-                            Description = "Among Us game not found."
-                        };
-                        modConfigs.Add(vanillaMod);
-                        ConfigManager.SaveConfig(modConfigs);
-                    }
-                    AddGameIcon(vanillaMod);
-                    var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
-                    if (vanillaIcon != null)
-                    {
-                        if (!string.IsNullOrEmpty(vanillaMod.Description))
-                        {
-                            toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
-                        }
+                        toolTip.SetToolTip(vanillaIcon, vanillaMod.Description);
                     }
                 }
             }
-            // Konfiguruj komponenty modów niebêd¹cych "AmongUs"
+
+            // Pobranie legendary.exe dla wersji Epic
+            if (mode == "epic" && !File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.exe")))
+            {
+                try
+                {
+                    string legendaryUrl = "https://github.com/derrod/legendary/releases/latest/download/legendary.exe";
+                    string legendaryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.exe");
+
+                    using (HttpClient client = new HttpClient())
+                    {
+                        HttpResponseMessage response = await client.GetAsync(legendaryUrl);
+                        response.EnsureSuccessStatusCode();
+                        using (var fs = new FileStream(legendaryPath, FileMode.Create, FileAccess.Write))
+                        {
+                            await response.Content.CopyToAsync(fs);
+                        }
+                        var epicManager = new EpicVersionManager();
+                        string importCommand = $"import 963137e4c29d4c79a81323b8fab03a40 \"{vanillaMod.InstallPath}\"";
+                        await epicManager.RunLegendaryCommandAsync(importCommand);
+                    }
+                    // Komunikat "informacyjny" po pomyÅ›lnym pobraniu
+                    //MessageBox.Show("Program legendary.exe dla wersji Epic zostaÅ‚ pobrany pomyÅ›lnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                // Komunikat "bÅ‚Ä™du" przy niepowodzeniu pobrania
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"WystÄ…piÅ‚ bÅ‚Ä…d podczas pobierania programu legendary.exe: {ex.Message}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            
+
             ConfigureModComponents(modConfigs.Where(x => x.ModName != "AmongUs").ToList());
         }
 
@@ -371,15 +425,15 @@ namespace SUSFuckr
                     var imageFile = Path.Combine("Graphics", config.PngFileName);
                     if (!File.Exists(imageFile))
                     {
-                        Console.WriteLine($"Pomijanie grafiki: {config.PngFileName} poniewa¿ plik nie istnieje.");
+                        Console.WriteLine($"Pomijanie grafiki: {config.PngFileName} poniewaÅ¼ plik nie istnieje.");
                         imageFile = Path.Combine("Graphics", "Vanilla.png");
                         if (!File.Exists(imageFile))
                         {
-                            MessageBox.Show("Nie znaleziono domyœlnego pliku graficznego: Vanilla.png", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show("Nie znaleziono domyÅ›lnego pliku graficznego: Vanilla.png", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             continue;
                         }
                     }
-                    Console.WriteLine($"Dodaj ikonê dla: {config.ModName}, PngFileName: {config.PngFileName}");
+                    Console.WriteLine($"Dodaj ikonÄ™ dla: {config.ModName}, PngFileName: {config.PngFileName}");
 
                     var gameIcon = new PictureBox
                     {
@@ -423,7 +477,7 @@ namespace SUSFuckr
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"Problem w czasie ³adowania: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Problem w czasie Å‚adowania: {ex.Message}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -438,7 +492,7 @@ namespace SUSFuckr
             }
             catch
             {
-                Console.WriteLine($"Nie uda³o siê odczytaæ wersji gry.");
+                Console.WriteLine($"Nie udaÅ‚o siÄ™ odczytaÄ‡ wersji gry.");
                 return "Nieznana";
             }
         }
@@ -448,7 +502,7 @@ namespace SUSFuckr
             var clickedIcon = sender as PictureBox;
             if (clickedIcon != null)
             {
-                // Resetowanie wszystkich ikon do ich oryginalnych obrazów
+                // Resetowanie wszystkich ikon do ich oryginalnych obrazÃ³w
                 foreach (var icon in originalImages.Keys)
                 {
                     if (icon != clickedIcon)
@@ -510,38 +564,63 @@ namespace SUSFuckr
             }
         }
 
-        private void LaunchButton_Click(object sender, EventArgs e)
+        private async void LaunchButton_Click(object sender, EventArgs e)
         {
             if (selectedIcon != null)
             {
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
                 if (modConfig != null)
                 {
-                    var exePath = Path.Combine(modConfig.InstallPath, "Among Us.exe");
-                    if (File.Exists(exePath))
+                    string mode = Configuration["Configuration:Mode"] ?? "steam";
+                    if (mode == "epic")
                     {
+                        var epicManager = new EpicVersionManager();
+                        await epicManager.HandleEpicGameAsync(modConfig);
+                    }
+                    else // ObsÅ‚uga dla Steam i Vanilla
+                    {
+                        var exePath = Path.Combine(modConfig.InstallPath, "Among Us.exe");
+                        var steamAppIdPath = Path.Combine(modConfig.InstallPath, "steam_appid.txt");
+
+                        // Sprawdzenie i utworzenie pliku steam_appid.txt
                         try
                         {
-                            Process.Start(exePath);
+                            File.WriteAllText(steamAppIdPath, "945360");
+                            Console.WriteLine("Plik steam_appid.txt utworzony z ID 945360.");
+
+                            // PrÃ³ba uruchomienia gry
+                            if (File.Exists(exePath))
+                            {
+                                Process.Start(new ProcessStartInfo("steam://") { UseShellExecute = true });
+                                Process.Start(exePath);
+                            }
+                            else
+                            {
+                                MessageBox.Show("Nie znaleziono pliku Among Us.exe w wybranej Å›cieÅ¼ce.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
                         catch (Exception ex)
                         {
-                            MessageBox.Show($"Failed to launch game: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show($"Problem z utworzeniem pliku steam_appid.txt: {ex.Message}. PrÃ³ba uruchomienia przez Steam URI.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            try
+                            {
+                                Process.Start(new ProcessStartInfo("steam://rungameid/945360") { UseShellExecute = true });
+                            }
+                            catch (Exception uriEx)
+                            {
+                                MessageBox.Show($"Failed to launch game via Steam URI: {uriEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
                         }
-                    }
-                    else
-                    {
-                        MessageBox.Show("Nie znaleziono pliku Among Us.exe w wybranej œcie¿ce.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
                 {
-                    MessageBox.Show("Brak wybranej wersji do uruchomienia.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Brak wybranej wersji do uruchomienia.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
             {
-                MessageBox.Show("Nie wybrano wersji gry do uruchomienia.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Nie wybrano wersji gry do uruchomienia.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -552,14 +631,24 @@ namespace SUSFuckr
                 var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
                 if (modConfig != null)
                 {
-                    ModManager manager = new ModManager(Configuration);
+                    string mode = Configuration["Configuration:Mode"] ?? "steam"; // Default to steam
                     bool modificationSuccess = false;
+                    progressBar.Visible = true;
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    progressLabel.Visible = true;
                     if (modConfig.ModType == "full")
                     {
-                        progressBar.Visible = true;
-                        progressBar.Style = ProgressBarStyle.Continuous;
-                        await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel);
-                        modificationSuccess = true;
+                        if (mode == "steam")
+                        {
+                            ModManager manager = new ModManager(Configuration);
+                            await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel, mode);
+                            modificationSuccess = true;
+                        }
+                        else if (mode == "epic")
+                        {
+                            await ModifyEpicAndUpdateUI(modConfig);
+                            modificationSuccess = true;
+                        }
                     }
                     else if (modConfig.ModType == "dll")
                     {
@@ -568,27 +657,30 @@ namespace SUSFuckr
                         if (modSelector.ShowDialog() == DialogResult.OK)
                         {
                             var selectedMods = modSelector.SelectedMods;
-                            progressBar.Visible = true;
+                            ModManager manager = new ModManager(Configuration);
                             await manager.ModifyDllAsync(modConfig, selectedMods, progressBar, progressLabel);
                             modificationSuccess = true;
                         }
                     }
+
                     progressBar.Visible = false;
                     progressLabel.Visible = false;
+
                     if (modificationSuccess)
                     {
+                        // Zaktualizuj UI i ikonÄ™ tylko po zakoÅ„czeniu zadania
                         UpdateFormDisplay(modConfig);
-                        RefreshSingleIcon(selectedIcon);  // Odœwie¿ tylko wybran¹ ikonê
+                        RefreshSingleIcon(selectedIcon);
                     }
                 }
                 else
                 {
-                    MessageBox.Show("Nie mo¿na znaleŸæ konfiguracji dla wybranego moda.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Nie moÅ¼na znaleÅºÄ‡ konfiguracji dla wybranego moda.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
             {
-                MessageBox.Show("Nie wybrano ¿adnej ikony do modyfikacji.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Nie wybrano Å¼adnej ikony do modyfikacji.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -596,9 +688,10 @@ namespace SUSFuckr
         {
             using var dialog = new OpenFileDialog
             {
-                Title = "Wska¿ plik Among Us.exe",
+                Title = "WskaÅ¼ plik Among Us.exe",
                 Filter = "Plik wykonywalny Among Us|Among Us.exe"
             };
+
             if (dialog.ShowDialog() == DialogResult.OK)
             {
                 var selectedFilePath = dialog.FileName;
@@ -607,9 +700,9 @@ namespace SUSFuckr
                     var directoryName = Path.GetDirectoryName(selectedFilePath);
                     if (directoryName != null)
                     {
-                        // ZnajdŸ lub dodaj konfiguracjê
-                        var existingConfig = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
+                        string detectedMode = DetectGameMode(directoryName);
 
+                        var existingConfig = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
                         if (existingConfig != null)
                         {
                             existingConfig.InstallPath = directoryName.Replace('/', '\\');
@@ -632,23 +725,37 @@ namespace SUSFuckr
                             modConfigs.Add(newConfig);
                         }
 
-                        // Zapisz konfiguracjê
+                        // Zapis trybu w konfiguracji
+                        Configuration["Configuration:Mode"] = detectedMode;
                         ConfigManager.SaveConfig(modConfigs);
-                        MessageBox.Show("Œcie¿ka do Among Us zapisana. Aplikacja zostanie ponownie uruchomiona.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ConfigManager.SaveConfigurationSetting("Mode", detectedMode);
 
+                        MessageBox.Show($"ÅšcieÅ¼ka do Among Us zapisana jako wersja {detectedMode}. Aplikacja zostanie ponownie uruchomiona.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         // Ponowne uruchomienie aplikacji
                         RestartApplication();
                     }
                     else
                     {
-                        MessageBox.Show("Nie mo¿na uzyskaæ katalogu docelowego.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show("Nie moÅ¼na uzyskaÄ‡ katalogu docelowego.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
                 else
                 {
-                    MessageBox.Show("Proszê wybraæ prawid³owy plik Among Us.exe.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("ProszÄ™ wybraÄ‡ prawidÅ‚owy plik Among Us.exe.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
+        }
+
+        private string DetectGameMode(string directoryName)
+        {
+            // Sprawdzenie Epic
+            if (Directory.Exists(Path.Combine(directoryName, ".egstore")))
+            {
+                return "epic";
+            }
+
+            // DomyÅ›lnie zakÅ‚adamy Steam, jeÅ›li brak bardziej specyficznych wskaÅºnikÃ³w dla Epic
+            return "steam";
         }
 
 
@@ -662,7 +769,7 @@ namespace SUSFuckr
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Nie uda³o siê odczytaæ wersji gry. " + ex.Message, "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Nie udaÅ‚o siÄ™ odczytaÄ‡ wersji gry. " + ex.Message, "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 labelVersion.Text = "Wersja: Nieznana";
             }
         }
@@ -698,7 +805,7 @@ namespace SUSFuckr
             }
             catch (FileNotFoundException)
             {
-                MessageBox.Show($"Nie znaleziono pliku graficznego: {config.PngFileName}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Nie znaleziono pliku graficznego: {config.PngFileName}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -711,12 +818,12 @@ namespace SUSFuckr
                 {
                     ModDelete.DeleteMod(modConfig, modConfigs);
                     UpdateFormDisplay(modConfig);
-                    RefreshSingleIcon(selectedIcon);  // Odœwie¿ tylko wybran¹ ikonê
+                    RefreshSingleIcon(selectedIcon);  // OdÅ›wieÅ¼ tylko wybranÄ… ikonÄ™
                 }
             }
             else
             {
-                MessageBox.Show("Nie wybrano ¿adnej ikony do usuniêcia.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Nie wybrano Å¼adnej ikony do usuniÄ™cia.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -730,19 +837,33 @@ namespace SUSFuckr
                     progressBar.Visible = true;
                     progressBar.Style = ProgressBarStyle.Continuous;
                     progressBar.Value = 0;
-                    await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel, Configuration);
+                    string mode = Configuration["Configuration:Mode"] ?? "steam"; // Default to steam
+
+                    if (modConfig.ModType == "full")
+                    {
+                        if (mode == "steam")
+                        {
+                            await ModUpdates.UpdateModAsync(modConfig, modConfigs, progressBar, progressLabel, Configuration); // UÅ¼yj Configuration jako piÄ…tego argumentu
+                        }
+                        else if (mode == "epic")
+                        {
+                            ModDelete.DeleteMod(modConfig, modConfigs);
+                            await ModifyEpicAndUpdateUI(modConfig);
+                        }
+                    }
+
                     progressBar.Visible = false;
                     UpdateFormDisplay(modConfig);
-                    RefreshSingleIcon(selectedIcon);  // Odœwie¿ tylko wybran¹ ikonê
+                    RefreshSingleIcon(selectedIcon);
                 }
                 else
                 {
-                    MessageBox.Show("Nie mo¿na znaleŸæ konfiguracji dla wybranego moda.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("Nie moÅ¼na znaleÅºÄ‡ konfiguracji dla wybranego moda.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
             {
-                MessageBox.Show("Nie wybrano ¿adnej ikony do aktualizacji.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Nie wybrano Å¼adnej ikony do aktualizacji.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -800,4 +921,5 @@ namespace SUSFuckr
         }
 
     }
+
 }

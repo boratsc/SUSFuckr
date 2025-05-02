@@ -20,9 +20,19 @@ namespace SUSFuckr
                 {
                     progressBar.Visible = true;
                     progressBar.Style = ProgressBarStyle.Continuous;
+
+                    // Usuniêcie istniej¹cego moda przed aktualizacj¹
                     ModDelete.DeleteMod(modConfig, modConfigs);
-                    ModManager manager = new ModManager(configuration); // Przekazanie configuration
-                    await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel);
+
+                    // Inicjalizacja ModManager z konfiguracj¹
+                    ModManager modManager = new ModManager(configuration);
+
+                    // U¿ycie mode z konfiguracji
+                    string mode = configuration["Configuration:Mode"] ?? "steam"; // lub "epic", zale¿nie od ustawieñ
+
+                    // Wywo³anie ModifyAsync z prawid³owym argumentem mode
+                    await modManager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel, mode);
+
                     progressBar.Visible = false;
                     MessageBox.Show($"Mod '{modConfig.ModName}' zosta³ pomyœlnie zaktualizowany.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
