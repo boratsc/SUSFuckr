@@ -1,7 +1,7 @@
 [
     {
         "Id": 1,
-        "ModName": "ToU - R",
+        "ModName": "Town of Us",
         "PngFileName": "1.png",
         "InstallPath": "",
         "GitHubRepoOrLink": "https://github.com/eDonnes124/Town-Of-Us-R/releases/download/v5.3.1/ToU.v5.3.1.zip",
@@ -11,32 +11,6 @@
         "LastUpdated": "2025-02-08T00:00:00",
         "AmongVersion": "2025-3-31",
         "Description": "Town of Us - najpopularniejszy z modów"
-    },
-    {
-        "Id": 2,
-        "ModName": "ToU - Wygon",
-        "PngFileName": "3.png",
-        "InstallPath": "",
-        "GitHubRepoOrLink": "https://github.com/wygon/Town-Of-Us-WYGON/releases/download/v2.0.0/ToU-W.v2.0.0.zip",
-        "ModType": "full",
-        "DllInstallPath": null,
-        "ModVersion": "2.0.0",
-        "LastUpdated": "2025-02-08T00:00:00",
-        "AmongVersion": "2024-11-26",
-        "Description": ""
-    },
-    {
-        "Id": 3,
-        "ModName": "All The Roles",
-        "PngFileName": "2.png",
-        "InstallPath": "",
-        "GitHubRepoOrLink": "https://github.com/Zeo666/AllTheRoles/releases/download/0.12.3/AllTheRoles-0.12.3.zip",
-        "ModType": "full",
-        "DllInstallPath": null,
-        "ModVersion": "0.12.3",
-        "LastUpdated": "2025-02-08T00:00:00",
-        "AmongVersion": "2025-3-31",
-        "Description": ""
     },
     {
         "Id": 4,
@@ -49,20 +23,33 @@
         "ModVersion": "4.8.0",
         "LastUpdated": "2025-01-15T00:00:00",
         "AmongVersion": "2024-11-26",
-        "Description": ""
+        "Description": "mod dodający „wiele nowych ról” wraz z dodatkowymi ustawieniami i kosmetyką oraz tryb Draft"
     },
     {
-        "Id": 5,
-        "ModName": "AleLuduMod",
-        "PngFileName": "dll.png",
+        "Id": 3,
+        "ModName": "All The Roles",
+        "PngFileName": "2.png",
         "InstallPath": "",
-        "GitHubRepoOrLink": "https://github.com/townofus-pl/AleLuduMod/releases/latest/download/AleLuduMod.dll",
-        "ModType": "dll",
-        "DllInstallPath": "BepInEx\\plugins",
-        "ModVersion": "latest",
-        "LastUpdated": "2025-01-15T00:00:00",
-        "AmongVersion": "ToU",
-        "Description": ""
+        "GitHubRepoOrLink": "https://github.com/Zeo666/AllTheRoles/releases/download/0.12.3/AllTheRoles-0.12.3.zip",
+        "ModType": "full",
+        "DllInstallPath": null,
+        "ModVersion": "0.12.3",
+        "LastUpdated": "2025-02-08T00:00:00",
+        "AmongVersion": "2025-3-31",
+        "Description": "Ciekawy mod z trybem Draft, niestety wydaje się póki co niestabilny"
+    },
+    {
+        "Id": 2,
+        "ModName": "ToU - Wygon",
+        "PngFileName": "3.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/wygon/Town-Of-Us-WYGON/releases/download/v2.0.0/ToU-W.v2.0.0.zip",
+        "ModType": "full",
+        "DllInstallPath": null,
+        "ModVersion": "2.0.0",
+        "LastUpdated": "2025-02-08T00:00:00",
+        "AmongVersion": "2024-11-26",
+        "Description": "Takie Town of Us ale z dodatkowymi rolami robione przez Polaka na jednym DC"
     },
     {
         "Id": 6,
@@ -75,6 +62,19 @@
         "ModVersion": "2.2.1 Beta 4",
         "LastUpdated": "2025-02-08T00:00:00",
         "AmongVersion": "2025-3-31",
-        "Description": ""
+        "Description": "Gra na modach z ludźmi którzy modów nie mogą zainstalować (np. na telefonie / xbox)"
+    },
+    {
+        "Id": 5,
+        "ModName": "AleLuduMod",
+        "PngFileName": "dll.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/townofus-pl/AleLuduMod/releases/latest/download/AleLuduMod.dll",
+        "ModType": "dll",
+        "DllInstallPath": "BepInEx\\plugins",
+        "ModVersion": "latest",
+        "LastUpdated": "2025-01-15T00:00:00",
+        "AmongVersion": "ToU",
+        "Description": "Mod na większe lobby, działa z Town of Us i jego wariacjami"
     }
 ]
