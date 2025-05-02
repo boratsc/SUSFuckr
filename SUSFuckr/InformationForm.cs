@@ -35,7 +35,7 @@ namespace SUSFuckr
                 Text = "×",
                 Font = new Font("Arial", 16, FontStyle.Bold),
                 BackColor = Color.Transparent,
-                ForeColor = Color.White,
+                ForeColor = Color.Black,
                 FlatStyle = FlatStyle.Flat,
                 Location = new Point(this.Width - 50, 10),
                 Size = new Size(40, 40),
