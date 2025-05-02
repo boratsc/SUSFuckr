@@ -347,9 +347,12 @@ namespace SUSFuckr
                         {
                             await response.Content.CopyToAsync(fs);
                         }
+                        var epicManager = new EpicVersionManager();
+                        string importCommand = $"import 963137e4c29d4c79a81323b8fab03a40 \"{vanillaMod.InstallPath}\"";
+                        await epicManager.RunLegendaryCommandAsync(importCommand);
                     }
                     // Komunikat "informacyjny" po pomyślnym pobraniu
-                    MessageBox.Show("Program legendary.exe dla wersji Epic został pobrany pomyślnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    //MessageBox.Show("Program legendary.exe dla wersji Epic został pobrany pomyślnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 // Komunikat "błędu" przy niepowodzeniu pobrania
                 catch (Exception ex)
@@ -588,6 +591,7 @@ namespace SUSFuckr
                             // Próba uruchomienia gry
                             if (File.Exists(exePath))
                             {
+                                Process.Start(new ProcessStartInfo("steam://") { UseShellExecute = true });
                                 Process.Start(exePath);
                             }
                             else
