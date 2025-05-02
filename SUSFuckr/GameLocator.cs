@@ -74,7 +74,7 @@ namespace SUSFuckr
 
             string currentMode = configuration["Configuration:Mode"] ?? "steam";
 
-            if (existingConfig != null && currentMode == "epic")
+            if (existingConfig != null)
             {
                 Console.WriteLine("Among Us ju¿ zainstalowano z wersj¹ Vanilla dla Epic.");
                 return;
@@ -83,7 +83,7 @@ namespace SUSFuckr
             string? foundPath = TryFindAmongUsPath(out string? detectedMode);
             if (foundPath == null)
             {
-                MessageBox.Show("Nie znaleziono podstawowej wersji Among Us. Proszê wskazaæ folder rêcznie poprzez \"Przegl¹daj\".", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("Nie znaleziono podstawowej wersji Among Us. Proszê wskazaæ folder rêcznie poprzez \"Wska¿ rêcznie\".", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
