@@ -121,6 +121,10 @@ namespace SUSFuckr
             loadServerConfigItem.Click += async (s, ev) => await ModConfigHandler.LoadServerConfigAsync();
             touConfigItem.DropDownItems.Add(loadServerConfigItem);
 
+            ToolStripMenuItem loadLocalTxtConfigItem = new ToolStripMenuItem("Wczytaj konfigurację z pliku .txt");
+            loadLocalTxtConfigItem.Click += (s, ev) => ModConfigHandler.LoadLocalTxtConfig();
+            touConfigItem.DropDownItems.Add(loadLocalTxtConfigItem);
+
             additionalActionsMenuItem.DropDownItems.Add(touConfigItem);
 
 
