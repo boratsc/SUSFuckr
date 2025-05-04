@@ -24,11 +24,19 @@ namespace SUSFuckr
         {
             string sourceDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"AppData\LocalLow\Innersloth\Among Us");
             string configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody", "Konfiguracje");
+
             if (!Directory.Exists(configDir))
             {
                 Directory.CreateDirectory(configDir);
             }
-            string destinationPath = Path.Combine(configDir, $"Konfiguracje{DateTime.Now:yyyyMMddHHmmss}.zip");
+
+            // Okno dialogowe pozwalaj¹ce u¿ytkownikowi wpisaæ nazwê konfiguracji
+            string configName = Prompt.ShowDialog("Wpisz nazwê konfiguracji:", "Nazwa konfiguracji");
+
+            // U¿ycie nazwy konfiguracji lub daty jeœli brak nazwy
+            string zipFileName = string.IsNullOrWhiteSpace(configName) ? $"Konfiguracje{DateTime.Now:yyyyMMddHHmmss}.zip" : $"{configName}.zip";
+            string destinationPath = Path.Combine(configDir, zipFileName);
+
             using (var zipStream = new FileStream(destinationPath, FileMode.Create))
             using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create))
             {
@@ -37,6 +45,7 @@ namespace SUSFuckr
                     archive.CreateEntryFromFile(filePath, Path.GetFileName(filePath));
                 }
             }
+
             MessageBox.Show("Konfiguracja zosta³a zapisana lokalnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
