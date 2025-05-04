@@ -50,12 +50,12 @@ namespace SUSFuckr
             updater.CheckAndPromptForUpdateAsync();
 
             // Tworzenie menu
-            CreateMenu();
+            
 
             // Inicjalizacja konfiguracji modów
             ModConfigHandler.Initialize(Configuration);
             modConfigs = ConfigManager.LoadConfig();
-
+            CreateMenu();
             // Ustawienia layoutu itp.
             Load += FormLoad;
             progressLabel = new Label
@@ -100,6 +100,7 @@ namespace SUSFuckr
 
         private void CreateMenu()
         {
+           
             menuStrip = new MenuStrip();
             ToolStripMenuItem additionalActionsMenuItem = new ToolStripMenuItem("Dodatkowe akcje");
 
@@ -137,6 +138,29 @@ namespace SUSFuckr
 
             menuStrip.Items.Add(additionalActionsMenuItem);
 
+            ToolStripMenuItem dllModsMenuItem = new ToolStripMenuItem("Modyfikacje DLL");
+            if (modConfigs != null)
+            {
+                foreach (var modConfig in modConfigs.Where(x => x.ModType == "dll"))
+                {
+                    ToolStripMenuItem modItem = new ToolStripMenuItem(modConfig.ModName);
+                    // Opcja "Instaluj"
+                    ToolStripMenuItem installItem = new ToolStripMenuItem("Instaluj");
+                    installItem.Click += (sender, e) => InstallDllMod(modConfig);
+                    // Opcja "Usuń"
+                    ToolStripMenuItem uninstallItem = new ToolStripMenuItem("Usuń");
+                    uninstallItem.Click += (sender, e) => UninstallDllMod(modConfig);
+                    modItem.DropDownItems.Add(installItem);
+                    modItem.DropDownItems.Add(uninstallItem);
+                    dllModsMenuItem.DropDownItems.Add(modItem);
+                }
+                menuStrip.Items.Add(dllModsMenuItem); // Dodajemy menu tylko raz, po zakończeniu pętli
+            }
+            else
+            {
+                MessageBox.Show("Nie załadowano konfiguracji modów.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+
             ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw Amonga");
             fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
             fixBlackScreenItem.MouseHover += (s, ev) => toolTip.Show("Naprawia czarny ekran, problemy z komunikacją, \nsprawia, że jest pokój na świecie, ale wywala prawie całą konfigurację!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
@@ -158,8 +182,99 @@ namespace SUSFuckr
 
 
 
+
+
+
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
+        }
+
+
+
+        private async void InstallDllMod(ModConfiguration modConfig)
+        {
+            // Upewnij się, czy `modConfig` nie jest nullem i czy jest typu `dll`
+            if (modConfig != null && modConfig.ModType == "dll")
+            {
+                // Zdobądź listę pełnych modów, dla których instalacja DLL może być wykonywana
+                var fullMods = modConfigs.Where(x => x.ModType == "full" && !string.IsNullOrEmpty(x.InstallPath)).ToList();
+
+                using var modSelector = new ModSelectorForm(fullMods);
+
+                // Wybór pełnych modów, z których użytkownik chce zainstalować mod DLL
+                if (modSelector.ShowDialog() == DialogResult.OK)
+                {
+                    var selectedMods = modSelector.SelectedMods;
+                    ModManager manager = new ModManager(Configuration);
+
+                    // Pokaż pasek postępu
+                    progressBar.Visible = true;
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    progressLabel.Visible = true;
+
+                    try
+                    {
+                        await manager.ModifyDllAsync(modConfig, selectedMods, progressBar, progressLabel);
+                        MessageBox.Show($"Instalacja moda {modConfig.ModName} zakończona pomyślnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Błąd podczas instalacji moda {modConfig.ModName}: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        // Ukryj pasek postępu
+                        progressBar.Visible = false;
+                        progressLabel.Visible = false;
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Nie wybrano żadnych pełnych modów do instalacji.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Nie można zainstalować, nieprawidłowa konfiguracja lub typ moda.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UninstallDllMod(ModConfiguration modConfig)
+        {
+            // Upewnij się, czy `modConfig` nie jest nullem i czy jest typu `dll`
+            if (modConfig != null && modConfig.ModType == "dll")
+            {
+                // Pobierz konfiguracje pełnych modów, dla których może być zainstalowany mod DLL
+                var fullMods = modConfigs.Where(x => x.ModType == "full" && !string.IsNullOrEmpty(x.InstallPath)).ToList();
+
+                // Używamy pełnych modów do usunięcia DLL z ich katalogów
+                foreach (var fullMod in fullMods)
+                {
+                    string dllPath = Path.Combine(fullMod.InstallPath, modConfig.DllInstallPath ?? string.Empty, $"{modConfig.ModName}.dll");
+                    try
+                    {
+                        if (File.Exists(dllPath))
+                        {
+                            File.Delete(dllPath);
+                            Console.WriteLine($"Plik {dllPath} został usunięty.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Plik {dllPath} nie istnieje.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Błąd podczas usuwania pliku {dllPath}: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+
+                MessageBox.Show($"Usuwanie moda {modConfig.ModName} zakończone pomyślnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("Nie można usunąć, nieprawidłowa konfiguracja lub typ moda.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
 
@@ -360,9 +475,9 @@ namespace SUSFuckr
                     MessageBox.Show($"Wystąpił błąd podczas pobierania programu legendary.exe: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-            
 
-            ConfigureModComponents(modConfigs.Where(x => x.ModName != "AmongUs").ToList());
+
+            ConfigureModComponents(modConfigs.Where(x => x.ModName != "AmongUs" && x.ModType != "dll").ToList()); // Exclude DLL mods
         }
 
         private void UpdateFormDisplay(ModConfiguration modConfig)
@@ -415,10 +530,8 @@ namespace SUSFuckr
             int initialY = 20;
             int iconWidth = 64;
             int offsetX = 10;
-
             ToolTip toolTip = new ToolTip(); // Tworzenie nowego obiektu ToolTip
-
-            foreach (var config in configs)
+            foreach (var config in configs.Where(x => x.ModType != "dll")) // Exclude DLL mods
             {
                 try
                 {
@@ -434,7 +547,6 @@ namespace SUSFuckr
                         }
                     }
                     Console.WriteLine($"Dodaj ikonę dla: {config.ModName}, PngFileName: {config.PngFileName}");
-
                     var gameIcon = new PictureBox
                     {
                         Location = new Point(initialX, initialY),
@@ -444,23 +556,18 @@ namespace SUSFuckr
                         Image = Image.FromFile(imageFile),
                         Cursor = Cursors.Hand
                     };
-
                     originalImages[gameIcon] = new Bitmap(gameIcon.Image);
-
                     // Ustawienie tooltipa dla ikony
                     if (!string.IsNullOrEmpty(config.Description))
                     {
                         toolTip.SetToolTip(gameIcon, config.Description);
                     }
-
                     if (!string.IsNullOrEmpty(config.InstallPath) && Directory.Exists(config.InstallPath))
                     {
                         AddInstalledIcon(gameIcon);
                     }
-
                     gameIcon.Click += GameIcon_Click;
                     this.contentPanel.Controls.Add(gameIcon);
-
                     var labelGame = new Label
                     {
                         Location = new Point(initialX, initialY + iconWidth),
@@ -471,7 +578,6 @@ namespace SUSFuckr
                         Text = config.ModName,
                         TextAlign = ContentAlignment.TopCenter
                     };
-
                     this.contentPanel.Controls.Add(labelGame);
                     initialX += iconWidth + offsetX;
                 }
