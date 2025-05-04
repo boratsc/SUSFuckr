@@ -34,7 +34,7 @@ namespace SUSFuckr
             string configName = Prompt.ShowDialog("Wpisz nazwê konfiguracji:", "Nazwa konfiguracji");
 
             // U¿ycie nazwy konfiguracji lub daty jeœli brak nazwy
-            string zipFileName = string.IsNullOrWhiteSpace(configName) ? $"Konfiguracje{DateTime.Now:yyyyMMddHHmmss}.zip" : $"{configName}.zip";
+            string zipFileName = string.IsNullOrWhiteSpace(configName) ? $"Konfiguracja z dnia - {DateTime.Now:yyyyMMddHHmmss}.zip" : $"{configName}.zip";
             string destinationPath = Path.Combine(configDir, zipFileName);
 
             using (var zipStream = new FileStream(destinationPath, FileMode.Create))
