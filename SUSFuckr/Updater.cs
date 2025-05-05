@@ -75,7 +75,7 @@ namespace SUSFuckr
 
                 string updaterPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater", "updater.exe");
 
-                await UpdateConfigurationBeforeExitAsync();
+                
 
                 Process.Start(new ProcessStartInfo
                 {
