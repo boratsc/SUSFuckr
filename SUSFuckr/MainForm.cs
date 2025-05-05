@@ -19,7 +19,6 @@ namespace SUSFuckr
         private List<ModConfiguration> modConfigs;
         private Label progressLabel;
         private MenuStrip menuStrip = new MenuStrip();
-        private Panel overlayPanel = new Panel();
         private readonly IConfiguration Configuration;
         private readonly string appVersion = string.Empty;
         private ToolTip toolTip;
@@ -39,23 +38,23 @@ namespace SUSFuckr
 
             appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1";
             Text = $"SUSFuckr - przyjazny instalator modów {appVersion}";
-            Width = 640;
-            Height = 520;
+            Width = 630;
+            Height = 510;
             Icon = new Icon("Graphics/icon.ico");
 
             toolTip = new ToolTip();
 
             // Inicjalizacja updatera i sprawdzanie wersji
-            updater = new Updater(appVersion);
+            updater = new Updater(appVersion, Configuration);
             updater.CheckAndPromptForUpdateAsync();
 
             // Tworzenie menu
-            CreateMenu();
+            
 
             // Inicjalizacja konfiguracji modów
             ModConfigHandler.Initialize(Configuration);
             modConfigs = ConfigManager.LoadConfig();
-
+            CreateMenu();
             // Ustawienia layoutu itp.
             Load += FormLoad;
             progressLabel = new Label
@@ -100,6 +99,7 @@ namespace SUSFuckr
 
         private void CreateMenu()
         {
+           
             menuStrip = new MenuStrip();
             ToolStripMenuItem additionalActionsMenuItem = new ToolStripMenuItem("Dodatkowe akcje");
 
@@ -120,6 +120,16 @@ namespace SUSFuckr
             loadServerConfigItem.Click += async (s, ev) => await ModConfigHandler.LoadServerConfigAsync();
             touConfigItem.DropDownItems.Add(loadServerConfigItem);
 
+            ToolStripMenuItem loadLocalTxtConfigItem = new ToolStripMenuItem("Wczytaj konfigurację z pliku .txt");
+            loadLocalTxtConfigItem.Click += (s, ev) => ModConfigHandler.LoadLocalTxtConfig();
+            touConfigItem.DropDownItems.Add(loadLocalTxtConfigItem);
+
+            ToolStripMenuItem lobbySetItem = new ToolStripMenuItem("Ustaw ilość osób w Lobby");
+            lobbySetItem.Click += (s, ev) => LobbySet();
+            touConfigItem.DropDownItems.Add(lobbySetItem);
+
+
+
             additionalActionsMenuItem.DropDownItems.Add(touConfigItem);
 
 
@@ -136,6 +146,29 @@ namespace SUSFuckr
             additionalActionsMenuItem.DropDownItems.Add(updateApplicationItem);
 
             menuStrip.Items.Add(additionalActionsMenuItem);
+
+            ToolStripMenuItem dllModsMenuItem = new ToolStripMenuItem("Modyfikacje DLL");
+            if (modConfigs != null)
+            {
+                foreach (var modConfig in modConfigs.Where(x => x.ModType == "dll"))
+                {
+                    ToolStripMenuItem modItem = new ToolStripMenuItem(modConfig.ModName);
+                    // Opcja "Instaluj"
+                    ToolStripMenuItem installItem = new ToolStripMenuItem("Instaluj");
+                    installItem.Click += (sender, e) => InstallDllMod(modConfig);
+                    // Opcja "Usuń"
+                    ToolStripMenuItem uninstallItem = new ToolStripMenuItem("Usuń");
+                    uninstallItem.Click += (sender, e) => UninstallDllMod(modConfig);
+                    modItem.DropDownItems.Add(installItem);
+                    modItem.DropDownItems.Add(uninstallItem);
+                    dllModsMenuItem.DropDownItems.Add(modItem);
+                }
+                menuStrip.Items.Add(dllModsMenuItem); // Dodajemy menu tylko raz, po zakończeniu pętli
+            }
+            else
+            {
+                MessageBox.Show("Nie załadowano konfiguracji modów.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
 
             ToolStripMenuItem fixBlackScreenItem = new ToolStripMenuItem("Napraw Amonga");
             fixBlackScreenItem.Click += new EventHandler(FixBlackScreenMenuItem_Click);
@@ -157,9 +190,165 @@ namespace SUSFuckr
             menuStrip.Items.Add(supportMenuItem);
 
 
-
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
+        }
+
+        private void LobbySet()
+        {
+            // Wyświetlenie dialogu do wpisania liczby graczy
+            using (Form dialog = new Form())
+            {
+                dialog.Text = "Ustaw ilość graczy w Lobby";
+                dialog.Size = new Size(300, 150); // Ustawienie rozmiaru okna
+                dialog.StartPosition = FormStartPosition.CenterScreen; // Wyśrodkowanie okna na ekranie
+
+                Label label = new Label { Text = "Wpisz liczbę graczy (od 4 do 255):", AutoSize = true, Location = new Point(10, 20) };
+                TextBox textBox = new TextBox { Location = new Point(200, 20), Width = 50 };
+                Button button = new Button { Text = "OK", Location = new Point(120, 60), DialogResult = DialogResult.OK };
+
+                dialog.Controls.Add(label);
+                dialog.Controls.Add(textBox);
+                dialog.Controls.Add(button);
+
+                dialog.AcceptButton = button; // Umożliwienie zatwierdzenia formularza po wciśnięciu Enter
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    if (int.TryParse(textBox.Text, out int numPlayers) && numPlayers >= 4 && numPlayers <= 255)
+                    {
+                        // Ścieżka do pliku konfiguracyjnego
+                        string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                                        @"Low\Innersloth\Among Us\settings.amogus_TOU");
+
+                        if (File.Exists(filePath))
+                        {
+                            // Odczytanie zawartości pliku
+                            string jsonContent = File.ReadAllText(filePath);
+
+                            // Deserializacja JSON
+                            dynamic settings = Newtonsoft.Json.JsonConvert.DeserializeObject(jsonContent);
+
+                            // Generowanie nowego kodu
+                            string customCode = GenerateCustomCode(numPlayers);
+
+                            // Aktualizacja normalHostOptions
+                            string normalHostOptions = settings.multiplayer.normalHostOptions;
+                            string updatedNormalHostOptions = $"{normalHostOptions.Substring(0, 8)}{customCode}{normalHostOptions.Substring(12)}";
+                            settings.multiplayer.normalHostOptions = updatedNormalHostOptions;
+
+                            // Serializacja zaktualizowanych danych JSON
+                            string updatedJsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(settings, Newtonsoft.Json.Formatting.Indented);
+
+                            // Zapis zaktualizowanych danych do pliku
+                            File.WriteAllText(filePath, updatedJsonContent);
+
+                            // Wyświetlenie komunikatu po zakończeniu operacji
+                            MessageBox.Show($"Ustawiono liczbę graczy na {numPlayers}. Wymagany jest CrowdedMod, aby uruchomić lobby z większą ilością graczy.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Brak pliku konfiguracyjnego ToU - uruchom grę z modem, zamknij i spróbuj ponownie.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Proszę wpisać poprawną liczbę graczy (od 4 do 255).", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            }
+        }
+
+        static string GenerateCustomCode(int value)
+        {
+            byte[] bytes = new byte[] { 0x00, (byte)value, 0x01 };
+            return Convert.ToBase64String(bytes);
+        }
+
+        private async void InstallDllMod(ModConfiguration modConfig)
+        {
+            // Upewnij się, czy `modConfig` nie jest nullem i czy jest typu `dll`
+            if (modConfig != null && modConfig.ModType == "dll")
+            {
+                // Zdobądź listę pełnych modów, dla których instalacja DLL może być wykonywana
+                var fullMods = modConfigs.Where(x => x.ModType == "full" && !string.IsNullOrEmpty(x.InstallPath)).ToList();
+
+                using var modSelector = new ModSelectorForm(fullMods);
+
+                // Wybór pełnych modów, z których użytkownik chce zainstalować mod DLL
+                if (modSelector.ShowDialog() == DialogResult.OK)
+                {
+                    var selectedMods = modSelector.SelectedMods;
+                    ModManager manager = new ModManager(Configuration);
+
+                    // Pokaż pasek postępu
+                    progressBar.Visible = true;
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    progressLabel.Visible = true;
+
+                    try
+                    {
+                        await manager.ModifyDllAsync(modConfig, selectedMods, progressBar, progressLabel);
+                        MessageBox.Show($"Instalacja moda {modConfig.ModName} zakończona pomyślnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Błąd podczas instalacji moda {modConfig.ModName}: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    finally
+                    {
+                        // Ukryj pasek postępu
+                        progressBar.Visible = false;
+                        progressLabel.Visible = false;
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Nie wybrano żadnych pełnych modów do instalacji.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            else
+            {
+                MessageBox.Show("Nie można zainstalować, nieprawidłowa konfiguracja lub typ moda.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void UninstallDllMod(ModConfiguration modConfig)
+        {
+            // Upewnij się, czy `modConfig` nie jest nullem i czy jest typu `dll`
+            if (modConfig != null && modConfig.ModType == "dll")
+            {
+                // Pobierz konfiguracje pełnych modów, dla których może być zainstalowany mod DLL
+                var fullMods = modConfigs.Where(x => x.ModType == "full" && !string.IsNullOrEmpty(x.InstallPath)).ToList();
+
+                // Używamy pełnych modów do usunięcia DLL z ich katalogów
+                foreach (var fullMod in fullMods)
+                {
+                    string dllPath = Path.Combine(fullMod.InstallPath, modConfig.DllInstallPath ?? string.Empty, $"{modConfig.ModName}.dll");
+                    try
+                    {
+                        if (File.Exists(dllPath))
+                        {
+                            File.Delete(dllPath);
+                            Console.WriteLine($"Plik {dllPath} został usunięty.");
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Plik {dllPath} nie istnieje.");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Błąd podczas usuwania pliku {dllPath}: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+
+                MessageBox.Show($"Usuwanie moda {modConfig.ModName} zakończone pomyślnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("Nie można usunąć, nieprawidłowa konfiguracja lub typ moda.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
 
@@ -245,23 +434,19 @@ namespace SUSFuckr
         {
             modConfigs = ConfigManager.LoadConfig(); // Ładujemy istniejące konfiguracje
             var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
-
             // Sprawdź wersję gry
             string mode = Configuration["Configuration:Mode"] ?? "steam"; // Default to steam
             string? path = vanillaMod?.InstallPath;
             path = path != null && File.Exists(Path.Combine(path, "Among Us.exe"))
                 ? path
                 : GameLocator.TryFindAmongUsPath(out mode);
-
             // Aktualizuj konfigurację w zależności od znalezionej wersji
             if (path != null)
             {
                 Configuration["Configuration:Mode"] = mode;
                 var version = GetGameVersion(path);
-
                 textBoxPath.Text = path.Replace('/', '\\');
                 labelVersion.Text = "Wersja: " + version;
-
                 if (vanillaMod == null)
                 {
                     vanillaMod = new ModConfiguration
@@ -285,10 +470,9 @@ namespace SUSFuckr
                     vanillaMod.AmongVersion = version;
                     vanillaMod.Description = $"Wykryto wersję {mode}";
                 }
-
                 ConfigManager.SaveConfig(modConfigs);
                 AddGameIcon(vanillaMod);
-                var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
+                var vanillaIcon = this.scrollablePanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
                 if (vanillaIcon != null)
                 {
                     AddInstalledIcon(vanillaIcon);
@@ -321,7 +505,7 @@ namespace SUSFuckr
                     ConfigManager.SaveConfig(modConfigs);
                 }
                 AddGameIcon(vanillaMod);
-                var vanillaIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
+                var vanillaIcon = this.scrollablePanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{vanillaMod.ModName}");
                 if (vanillaIcon != null)
                 {
                     if (!string.IsNullOrEmpty(vanillaMod.Description))
@@ -360,9 +544,9 @@ namespace SUSFuckr
                     MessageBox.Show($"Wystąpił błąd podczas pobierania programu legendary.exe: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-            
 
-            ConfigureModComponents(modConfigs.Where(x => x.ModName != "AmongUs").ToList());
+
+            ConfigureModComponents(modConfigs.Where(x => x.ModName != "AmongUs" && x.ModType != "dll").ToList()); // Exclude DLL mods
         }
 
         private void UpdateFormDisplay(ModConfiguration modConfig)
@@ -374,7 +558,7 @@ namespace SUSFuckr
 
                 if (!string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath))
                 {
-                    var modIcon = this.contentPanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{modConfig.ModName}");
+                    var modIcon = this.scrollablePanel.Controls.OfType<PictureBox>().FirstOrDefault(icon => icon.Name == $"gameIcon_{modConfig.ModName}");
                     if (modIcon != null)
                     {
                         AddInstalledIcon(modIcon);
@@ -411,74 +595,118 @@ namespace SUSFuckr
         private Dictionary<PictureBox, Bitmap> originalImages = new Dictionary<PictureBox, Bitmap>();
         private void ConfigureModComponents(List<ModConfiguration> configs)
         {
-            int initialX = 94;
-            int initialY = 20;
+            int initialY = 5;
             int iconWidth = 64;
-            int offsetX = 10;
 
-            ToolTip toolTip = new ToolTip(); // Tworzenie nowego obiektu ToolTip
+            // Obliczenie dynamicznego offsetu
+            int numIcons = configs.Count;
+            int panelWidth = this.scrollablePanel.ClientSize.Width;
 
-            foreach (var config in configs)
+            if (numIcons > 0)
             {
-                try
+                int totalIconWidth = numIcons * iconWidth;
+                int availableSpace = panelWidth - totalIconWidth - 71;
+                int offsetX = Math.Max(availableSpace / (numIcons + 1), 5); // Dodaj 1, aby uwzględnić odstępy przed pierwszą i po ostatnią ikoną
+
+                int initialX = 71 + offsetX; // Rozpocznij od 71px plus dynamiczny offset
+
+                ToolTip toolTip = new ToolTip(); // Tworzenie nowego obiektu ToolTip
+
+                foreach (var config in configs.Where(x => x.ModType != "dll")) // Exclude DLL mods
                 {
-                    var imageFile = Path.Combine("Graphics", config.PngFileName);
-                    if (!File.Exists(imageFile))
+                    try
                     {
-                        Console.WriteLine($"Pomijanie grafiki: {config.PngFileName} ponieważ plik nie istnieje.");
-                        imageFile = Path.Combine("Graphics", "Vanilla.png");
+                        var imageFile = Path.Combine("Graphics", config.PngFileName);
                         if (!File.Exists(imageFile))
                         {
-                            MessageBox.Show("Nie znaleziono domyślnego pliku graficznego: Vanilla.png", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            continue;
+                            Console.WriteLine($"Pomijanie grafiki: {config.PngFileName} ponieważ plik nie istnieje.");
+                            imageFile = Path.Combine("Graphics", "Vanilla.png");
+                            if (!File.Exists(imageFile))
+                            {
+                                MessageBox.Show("Nie znaleziono domyślnego pliku graficznego: Vanilla.png", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                continue;
+                            }
                         }
+                        Console.WriteLine($"Dodaj ikonę dla: {config.ModName}, PngFileName: {config.PngFileName}");
+
+                        var gameIcon = new PictureBox
+                        {
+                            Location = new Point(initialX, initialY),
+                            Name = $"gameIcon_{config.ModName}",
+                            Size = new Size(iconWidth, iconWidth),
+                            SizeMode = PictureBoxSizeMode.StretchImage,
+                            Image = Image.FromFile(imageFile),
+                            Cursor = Cursors.Hand
+                        };
+                        originalImages[gameIcon] = new Bitmap(gameIcon.Image);
+
+                        if (!string.IsNullOrEmpty(config.Description))
+                        {
+                            toolTip.SetToolTip(gameIcon, config.Description);
+                        }
+
+                        if (!string.IsNullOrEmpty(config.InstallPath) && Directory.Exists(config.InstallPath))
+                        {
+                            AddInstalledIcon(gameIcon);
+                        }
+
+                        gameIcon.Click += GameIcon_Click;
+                        this.scrollablePanel.Controls.Add(gameIcon);
+
+                        var labelGame = new Label
+                        {
+                            Location = new Point(initialX, initialY + iconWidth),
+                            Name = $"labelGame_{config.ModName}",
+                            Size = new Size(iconWidth, 30),
+                            AutoSize = false,
+                            MaximumSize = new Size(iconWidth, 30),
+                            Text = config.ModName,
+                            TextAlign = ContentAlignment.TopCenter
+                        };
+                        this.scrollablePanel.Controls.Add(labelGame);
+
+                        initialX += iconWidth + offsetX; // Przesunięcie na kolejny start dla następnej ikony
                     }
-                    Console.WriteLine($"Dodaj ikonę dla: {config.ModName}, PngFileName: {config.PngFileName}");
-
-                    var gameIcon = new PictureBox
+                    catch (Exception ex)
                     {
-                        Location = new Point(initialX, initialY),
-                        Name = $"gameIcon_{config.ModName}",
-                        Size = new Size(iconWidth, iconWidth),
-                        SizeMode = PictureBoxSizeMode.StretchImage,
-                        Image = Image.FromFile(imageFile),
-                        Cursor = Cursors.Hand
-                    };
-
-                    originalImages[gameIcon] = new Bitmap(gameIcon.Image);
-
-                    // Ustawienie tooltipa dla ikony
-                    if (!string.IsNullOrEmpty(config.Description))
-                    {
-                        toolTip.SetToolTip(gameIcon, config.Description);
+                        MessageBox.Show($"Problem w czasie ładowania: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
-
-                    if (!string.IsNullOrEmpty(config.InstallPath) && Directory.Exists(config.InstallPath))
-                    {
-                        AddInstalledIcon(gameIcon);
-                    }
-
-                    gameIcon.Click += GameIcon_Click;
-                    this.contentPanel.Controls.Add(gameIcon);
-
-                    var labelGame = new Label
-                    {
-                        Location = new Point(initialX, initialY + iconWidth),
-                        Name = $"labelGame_{config.ModName}",
-                        Size = new Size(iconWidth, 60),
-                        AutoSize = false,
-                        MaximumSize = new Size(iconWidth, 60),
-                        Text = config.ModName,
-                        TextAlign = ContentAlignment.TopCenter
-                    };
-
-                    this.contentPanel.Controls.Add(labelGame);
-                    initialX += iconWidth + offsetX;
                 }
-                catch (Exception ex)
+            }
+        }
+
+        private void AddGameIcon(ModConfiguration config)
+        {
+            try
+            {
+                var gameIcon = new PictureBox
                 {
-                    MessageBox.Show($"Problem w czasie ładowania: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                    Location = new Point(5, 5),
+                    Name = $"gameIcon_{config.ModName}",
+                    Size = new Size(64, 64),
+                    SizeMode = PictureBoxSizeMode.StretchImage,
+                    Image = Image.FromFile(Path.Combine("Graphics", config.PngFileName)),
+                    Cursor = Cursors.Hand
+                };
+                originalImages[gameIcon] = new Bitmap(gameIcon.Image);
+                gameIcon.Click += GameIcon_Click;
+                this.scrollablePanel.Controls.Add(gameIcon);
+
+                var labelGame = new Label
+                {
+                    Location = new Point(5, 69),
+                    Name = $"label{config.ModName}",
+                    Size = new Size(64, 30),
+                    AutoSize = false,
+                    MaximumSize = new Size(64, 30),
+                    Text = config.ModName,
+                    TextAlign = ContentAlignment.TopCenter
+                };
+                this.scrollablePanel.Controls.Add(labelGame);
+            }
+            catch (FileNotFoundException)
+            {
+                MessageBox.Show($"Nie znaleziono pliku graficznego: {config.PngFileName}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -563,6 +791,8 @@ namespace SUSFuckr
                 UpdateFormDisplay(clickedModConfig);
             }
         }
+
+
 
         private async void LaunchButton_Click(object sender, EventArgs e)
         {
@@ -774,40 +1004,7 @@ namespace SUSFuckr
             }
         }
 
-        private void AddGameIcon(ModConfiguration config)
-        {
-            try
-            {
-                var gameIcon = new PictureBox
-                {
-                    Location = new Point(20, 20),
-                    Name = $"gameIcon_{config.ModName}",
-                    Size = new Size(64, 64),
-                    SizeMode = PictureBoxSizeMode.StretchImage,
-                    Image = Image.FromFile(Path.Combine("Graphics", config.PngFileName)),
-                    Cursor = Cursors.Hand
-                };
-                originalImages[gameIcon] = new Bitmap(gameIcon.Image);
-                gameIcon.Click += GameIcon_Click;
-                this.contentPanel.Controls.Add(gameIcon);
-
-                var labelGame = new Label
-                {
-                    Location = new Point(20, 84),
-                    Name = $"label{config.ModName}",
-                    Size = new Size(64, 60),
-                    AutoSize = false,
-                    MaximumSize = new Size(64, 60),
-                    Text = config.ModName,
-                    TextAlign = ContentAlignment.TopCenter
-                };
-                this.contentPanel.Controls.Add(labelGame);
-            }
-            catch (FileNotFoundException)
-            {
-                MessageBox.Show($"Nie znaleziono pliku graficznego: {config.PngFileName}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
+        
 
         private void DeleteButton_Click(object sender, EventArgs e)
         {
