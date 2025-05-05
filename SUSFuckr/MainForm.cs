@@ -217,9 +217,9 @@ namespace SUSFuckr
                 {
                     if (int.TryParse(textBox.Text, out int numPlayers) && numPlayers >= 4 && numPlayers <= 255)
                     {
-                        // Ścieżka do pliku konfiguracyjnego
-                        string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                                        @"Low\Innersloth\Among Us\settings.amogus_TOU");
+
+                        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                        string filePath =  Path.Combine(userProfile, @"AppData\LocalLow\Innersloth\Among Us\settings.amogus_TOU");
 
                         if (File.Exists(filePath))
                         {
