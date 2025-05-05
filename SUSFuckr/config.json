@@ -79,7 +79,7 @@
     },
     {
         "Id": 8,
-        "ModName": "AUnclocker",
+        "ModName": "AUnlocker",
         "PngFileName": "dll.png",
         "InstallPath": "",
         "GitHubRepoOrLink": "https://susfuckr.boracik.pl/susfuckr/mods/AUnlocker.dll",
@@ -89,5 +89,31 @@
         "LastUpdated": "2025-01-15T00:00:00",
         "AmongVersion": "ToU",
         "Description": "Odblokowanie wszystkich skórek itp"
+    },
+    {
+        "Id": 9,
+        "ModName": "LevelImposter",
+        "PngFileName": "dll.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://github.com/DigiWorm0/LevelImposter/releases/download/v0.20.3-beta/LevelImposter.dll",
+        "ModType": "dll",
+        "DllInstallPath": "BepInEx\\plugins",
+        "ModVersion": "Beta 0.20.3",
+        "LastUpdated": "2025-01-15T00:00:00",
+        "AmongVersion": "ToU",
+        "Description": "Mod na customowe mapy"
+    },
+    {
+        "Id": 10,
+        "ModName": "CrowdedMod",
+        "PngFileName": "dll.png",
+        "InstallPath": "",
+        "GitHubRepoOrLink": "https://susfuckr.boracik.pl/susfuckr/mods/CrowdedMod.dll",
+        "ModType": "dll",
+        "DllInstallPath": "BepInEx\\plugins",
+        "ModVersion": "2.10.0",
+        "LastUpdated": "2025-01-15T00:00:00",
+        "AmongVersion": "ToU",
+        "Description": "Mod na więcej osób w lobby, nawet do 100"
     }
 ]

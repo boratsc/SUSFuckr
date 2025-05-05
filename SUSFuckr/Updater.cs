@@ -4,16 +4,19 @@ using System.Net.Http;
 using System.Text.Json; // Po dodaniu
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Extensions.Configuration;
 
 namespace SUSFuckr
 {
     public class Updater
     {
+        private readonly IConfiguration configuration;
         private readonly string currentVersion;
 
-        public Updater(string currentVersion)
+        public Updater(string currentVersion, IConfiguration configuration)
         {
             this.currentVersion = currentVersion ?? "0.0.0";
+            this.configuration = configuration;
         }
 
         public async Task CheckAndPromptForUpdateAsync()
@@ -71,6 +74,9 @@ namespace SUSFuckr
                 }
 
                 string updaterPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "updater", "updater.exe");
+
+                await UpdateConfigurationBeforeExitAsync();
+
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = updaterPath,
@@ -84,6 +90,35 @@ namespace SUSFuckr
             {
                 Console.WriteLine($"B³¹d podczas pobierania i uruchamiania Updater: {ex.Message}");
                 MessageBox.Show($"B³¹d aktualizacji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        private async Task UpdateConfigurationBeforeExitAsync()
+        {
+            try
+            {
+                var tempFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.temp.json");
+                using (HttpClient client = new HttpClient())
+                {
+                    string updateServerUrl = configuration["Configuration:UpdateServerUrl"]; // U¿yj przekazanej konfiguracji
+                    if (string.IsNullOrEmpty(updateServerUrl))
+                    {
+                        throw new InvalidOperationException("UpdateServerUrl is null or empty.");
+                    }
+
+                    HttpResponseMessage response = await client.GetAsync(updateServerUrl);
+                    response.EnsureSuccessStatusCode();
+                    using (FileStream fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
+                    {
+                        await response.Content.CopyToAsync(fs);
+                    }
+                }
+
+                ConfigUpdater.CompareAndMergeConfigurations(tempFilePath);
+                File.Delete(tempFilePath);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"B³¹d podczas aktualizacji konfiguracji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

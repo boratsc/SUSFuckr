@@ -45,7 +45,7 @@ namespace SUSFuckr
             toolTip = new ToolTip();
 
             // Inicjalizacja updatera i sprawdzanie wersji
-            updater = new Updater(appVersion);
+            updater = new Updater(appVersion, Configuration);
             updater.CheckAndPromptForUpdateAsync();
 
             // Tworzenie menu
