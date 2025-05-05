@@ -81,6 +81,9 @@
             this.btnLaunch.TabIndex = 4;
             this.btnLaunch.Text = "Uruchom";
             this.btnLaunch.UseVisualStyleBackColor = true;
+            this.btnLaunch.Image = Image.FromFile("Graphics/UI/play.png");
+            this.btnLaunch.ImageAlign = ContentAlignment.MiddleLeft;
+            this.btnLaunch.TextAlign = ContentAlignment.MiddleCenter;
             this.btnLaunch.Click += new System.EventHandler(this.LaunchButton_Click);
 
             // Btn Modify
@@ -91,6 +94,9 @@
             this.btnModify.Text = "Instaluj moda";
             this.btnModify.UseVisualStyleBackColor = true;
             this.btnModify.Enabled = false;
+            this.btnModify.Image = Image.FromFile("Graphics/UI/install.png");
+            this.btnModify.ImageAlign = ContentAlignment.MiddleLeft;
+            this.btnModify.TextAlign = ContentAlignment.MiddleCenter;
             this.btnModify.Click += new System.EventHandler(this.ModifyButton_Click);
 
             // Btn Delete
@@ -101,6 +107,9 @@
             this.btnDelete.Text = "Usuń";
             this.btnDelete.UseVisualStyleBackColor = true;
             this.btnDelete.Enabled = false;
+            this.btnDelete.Image = Image.FromFile("Graphics/UI/uninstall.png");
+            this.btnDelete.ImageAlign = ContentAlignment.MiddleLeft;
+            this.btnDelete.TextAlign = ContentAlignment.MiddleCenter;
             this.btnDelete.Click += new System.EventHandler(this.DeleteButton_Click);
 
             // Btn Update Mod
@@ -111,6 +120,9 @@
             this.btnUpdateMod.Text = "Aktualizuj moda";
             this.btnUpdateMod.UseVisualStyleBackColor = true;
             this.btnUpdateMod.Enabled = false;
+            this.btnUpdateMod.Image = Image.FromFile("Graphics/UI/update.png");
+            this.btnUpdateMod.ImageAlign = ContentAlignment.MiddleLeft;
+            this.btnUpdateMod.TextAlign = ContentAlignment.MiddleCenter;
             this.btnUpdateMod.Click += new System.EventHandler(this.UpdateModButton_Click);
 
             // TextBox Path
