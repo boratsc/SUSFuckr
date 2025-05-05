@@ -124,6 +124,12 @@ namespace SUSFuckr
             loadLocalTxtConfigItem.Click += (s, ev) => ModConfigHandler.LoadLocalTxtConfig();
             touConfigItem.DropDownItems.Add(loadLocalTxtConfigItem);
 
+            ToolStripMenuItem lobbySetItem = new ToolStripMenuItem("Ustaw ilość osób w Lobby");
+            lobbySetItem.Click += (s, ev) => LobbySet();
+            touConfigItem.DropDownItems.Add(lobbySetItem);
+
+
+
             additionalActionsMenuItem.DropDownItems.Add(touConfigItem);
 
 
@@ -184,15 +190,80 @@ namespace SUSFuckr
             menuStrip.Items.Add(supportMenuItem);
 
 
-
-
-
-
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
         }
 
+        private void LobbySet()
+        {
+            // Wyświetlenie dialogu do wpisania liczby graczy
+            using (Form dialog = new Form())
+            {
+                dialog.Text = "Ustaw ilość graczy w Lobby";
+                dialog.Size = new Size(300, 150); // Ustawienie rozmiaru okna
+                dialog.StartPosition = FormStartPosition.CenterScreen; // Wyśrodkowanie okna na ekranie
 
+                Label label = new Label { Text = "Wpisz liczbę graczy (od 4 do 255):", AutoSize = true, Location = new Point(10, 20) };
+                TextBox textBox = new TextBox { Location = new Point(200, 20), Width = 50 };
+                Button button = new Button { Text = "OK", Location = new Point(120, 60), DialogResult = DialogResult.OK };
+
+                dialog.Controls.Add(label);
+                dialog.Controls.Add(textBox);
+                dialog.Controls.Add(button);
+
+                dialog.AcceptButton = button; // Umożliwienie zatwierdzenia formularza po wciśnięciu Enter
+
+                if (dialog.ShowDialog() == DialogResult.OK)
+                {
+                    if (int.TryParse(textBox.Text, out int numPlayers) && numPlayers >= 4 && numPlayers <= 255)
+                    {
+                        // Ścieżka do pliku konfiguracyjnego
+                        string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                                                        @"Low\Innersloth\Among Us\settings.amogus_TOU");
+
+                        if (File.Exists(filePath))
+                        {
+                            // Odczytanie zawartości pliku
+                            string jsonContent = File.ReadAllText(filePath);
+
+                            // Deserializacja JSON
+                            dynamic settings = Newtonsoft.Json.JsonConvert.DeserializeObject(jsonContent);
+
+                            // Generowanie nowego kodu
+                            string customCode = GenerateCustomCode(numPlayers);
+
+                            // Aktualizacja normalHostOptions
+                            string normalHostOptions = settings.multiplayer.normalHostOptions;
+                            string updatedNormalHostOptions = $"{normalHostOptions.Substring(0, 8)}{customCode}{normalHostOptions.Substring(12)}";
+                            settings.multiplayer.normalHostOptions = updatedNormalHostOptions;
+
+                            // Serializacja zaktualizowanych danych JSON
+                            string updatedJsonContent = Newtonsoft.Json.JsonConvert.SerializeObject(settings, Newtonsoft.Json.Formatting.Indented);
+
+                            // Zapis zaktualizowanych danych do pliku
+                            File.WriteAllText(filePath, updatedJsonContent);
+
+                            // Wyświetlenie komunikatu po zakończeniu operacji
+                            MessageBox.Show($"Ustawiono liczbę graczy na {numPlayers}. Wymagany jest CrowdedMod, aby uruchomić lobby z większą ilością graczy.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                        else
+                        {
+                            MessageBox.Show("Brak pliku konfiguracyjnego ToU - uruchom grę z modem, zamknij i spróbuj ponownie.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Proszę wpisać poprawną liczbę graczy (od 4 do 255).", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                }
+            }
+        }
+
+        static string GenerateCustomCode(int value)
+        {
+            byte[] bytes = new byte[] { 0x00, (byte)value, 0x01 };
+            return Convert.ToBase64String(bytes);
+        }
 
         private async void InstallDllMod(ModConfiguration modConfig)
         {
