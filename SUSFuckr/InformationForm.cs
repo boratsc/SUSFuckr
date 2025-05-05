@@ -59,7 +59,7 @@ namespace SUSFuckr
             tableLayout.Controls.Add(CreateInfoLabel(appVersion), 1, 0);
             tableLayout.Controls.Add(CreateBoldLabel("G³ówny Programista:"), 0, 1);
             tableLayout.Controls.Add(CreateInfoLabel("ChatGPT"), 1, 1);
-            tableLayout.Controls.Add(CreateBoldLabel("Pomocnik programisty:"), 0, 2);
+            tableLayout.Controls.Add(CreateBoldLabel("Pomocnik Programisty:"), 0, 2);
             tableLayout.Controls.Add(CreateInfoLabel("boracik"), 1, 2);
             tableLayout.Controls.Add(CreateBoldLabel("Testerzy:"), 0, 3);
             tableLayout.Controls.Add(CreateInfoLabel("Spo³ecznoœæ Psychopatyczna"), 1, 3);
