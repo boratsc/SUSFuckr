@@ -120,13 +120,13 @@ namespace SUSFuckr
             loadServerConfigItem.Click += async (s, ev) => await ModConfigHandler.LoadServerConfigAsync();
             touConfigItem.DropDownItems.Add(loadServerConfigItem);
 
-            ToolStripMenuItem changePresetNamesItem = new ToolStripMenuItem("Zmień nazwy presetów lobby");
-            changePresetNamesItem.Click += (s, ev) => ModConfigHandler.ChangePresetNames();
-            touConfigItem.DropDownItems.Add(changePresetNamesItem);
-
             ToolStripMenuItem loadLocalTxtConfigItem = new ToolStripMenuItem("Wczytaj konfigurację z pliku .txt");
             loadLocalTxtConfigItem.Click += (s, ev) => ModConfigHandler.LoadLocalTxtConfig();
             touConfigItem.DropDownItems.Add(loadLocalTxtConfigItem);
+
+            ToolStripMenuItem changePresetNamesItem = new ToolStripMenuItem("Zmień nazwy presetów lobby");
+            changePresetNamesItem.Click += (s, ev) => ModConfigHandler.ChangePresetNames();
+            touConfigItem.DropDownItems.Add(changePresetNamesItem);
 
             ToolStripMenuItem lobbySetItem = new ToolStripMenuItem("Ustaw ilość osób w Lobby");
             lobbySetItem.Click += (s, ev) => LobbySet();
