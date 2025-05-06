@@ -200,12 +200,12 @@ namespace SUSFuckr
             using (Form dialog = new Form())
             {
                 dialog.Text = "Ustaw ilość graczy w Lobby";
-                dialog.Size = new Size(300, 150); // Ustawienie rozmiaru okna
+                dialog.Size = new Size(300, 140); // Ustawienie rozmiaru okna
                 dialog.StartPosition = FormStartPosition.CenterScreen; // Wyśrodkowanie okna na ekranie
 
                 Label label = new Label { Text = "Wpisz liczbę graczy (od 4 do 255):", AutoSize = true, Location = new Point(10, 20) };
-                TextBox textBox = new TextBox { Location = new Point(200, 20), Width = 50 };
-                Button button = new Button { Text = "OK", Location = new Point(120, 60), DialogResult = DialogResult.OK };
+                TextBox textBox = new TextBox { Location = new Point(195, 15), Width = 50 };
+                Button button = new Button { Text = "OK", Location = new Point(100, 60), DialogResult = DialogResult.OK };
 
                 dialog.Controls.Add(label);
                 dialog.Controls.Add(textBox);
