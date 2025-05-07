@@ -188,10 +188,10 @@ namespace SUSFuckr
         }
 
         private TextBox txtModsPath;
-        private Button btnBrowse;
-        private Button btnSave;
-        private Button btnCancel;
-        private Button btnReset;
-        private Label lblInfo;
+        private Button btnBrowse = null!;
+        private Button btnSave = null!;
+        private Button btnCancel = null!;
+        private Button btnReset = null!;
+        private Label lblInfo = null!;
     }
 }

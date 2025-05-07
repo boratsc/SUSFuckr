@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Text.Json;
+using System.Collections.Generic;
 
 namespace SUSFuckr
 {
@@ -16,7 +17,10 @@ namespace SUSFuckr
         private readonly string installDirectory;
         private const string EpicAppId = "963137e4c29d4c79a81323b8fab03a40";
         private readonly string appSettingsFilePath;
-
+        private readonly string logFilePath;             // epic.log.txt
+        private readonly string legendaryLogFilePath;    // legendary.log.txt
+        public event Action<string>? LegendaryOutput;
+        private readonly object _fileLock = new object();
 
         public EpicVersionManager()
         {
@@ -25,6 +29,91 @@ namespace SUSFuckr
             installDirectory = PathSettings.ModsInstallPath;
             appSettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json"); // Inicjalizacja ścieżki w konstruktorze
 
+            logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "epic.log.txt");
+            legendaryLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.log.txt");
+        }
+
+        private void LogToFile(string message)
+        {
+            try
+            {
+                string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+                string logEntry = $"[{timestamp}] {message}{Environment.NewLine}";
+                File.AppendAllText(logFilePath, logEntry);
+            }
+            catch
+            {
+                // don't throw on logging failure
+            }
+        }
+
+        private async Task<string?> CheckInstalledAppsAsync()
+        {
+            try
+            {
+                LogToFile("Sprawdzanie zainstalowanych aplikacji (legendary.exe list-installed --json)");
+
+                // przygotuj temp plik
+                string tempFile = Path.Combine(Path.GetTempPath(), "tempepic.json");
+
+                // uruchom legendary list-installed --json
+                var psi = new ProcessStartInfo
+                {
+                    FileName = legendaryPath,
+                    Arguments = "list-installed --json",
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                };
+
+                using var proc = Process.Start(psi);
+                string stdout = await proc!.StandardOutput.ReadToEndAsync();
+                string stderr = await proc.StandardError.ReadToEndAsync();
+                proc.WaitForExit();
+
+                // zapisz JSON do pliku
+                File.WriteAllText(tempFile, stdout);
+
+                // zdeserializuj
+                var apps = JsonSerializer.Deserialize<List<InstalledApp>>(stdout)
+                           ?? new List<InstalledApp>();
+                var entry = apps.FirstOrDefault(a => a.app_name == EpicAppId);
+                if (entry == null)
+                {
+                    LogToFile($"Brak pozycji {EpicAppId} w tempepic.json");
+                    return null;
+                }
+
+                string foundPath = entry.install_path;
+                LogToFile($"Legendary zwraca ścieżkę: {foundPath}");
+
+                // pobierz config vanilla (Id == 0)
+                var configs = ConfigManager.LoadConfig();
+                var vanilla = configs.FirstOrDefault(c => c.Id == 0);
+                if (vanilla != null &&
+                    !string.Equals(vanilla.InstallPath, foundPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    LogToFile($"Różnica ścieżek: config.json='{vanilla.InstallPath}', legendary='{foundPath}'. Naprawiam...");
+                    // naprawa
+                    await RunLegendaryCommandAsync(
+                        $"repair {EpicAppId} --override-install-path \"{vanilla.InstallPath}\" -y");
+                }
+
+                return foundPath;
+            }
+            catch (Exception ex)
+            {
+                LogToFile($"ERROR w CheckInstalledAppsAsync: {ex}");
+                return null;
+            }
+        }
+
+        // 2) zdefiniuj klasę pomocniczą dla JSON
+        private class InstalledApp
+        {
+            public string app_name { get; set; }
+            public string install_path { get; set; }
         }
 
         public async Task ModifyEpicAsync(ModConfiguration modConfig, ProgressBar progressBar, Label progressLabel)
@@ -98,9 +187,11 @@ namespace SUSFuckr
             {
                 MessageBox.Show("Konfiguracja gry jest nieprawidłowa.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
-            }
+            }       
 
             await RunLegendaryCommandAsync("auth --import");
+
+            await CheckInstalledAppsAsync();
 
             int lastLaunchId = GetLastLaunchId();
             if (modConfig.Id == lastLaunchId)
@@ -193,24 +284,57 @@ namespace SUSFuckr
         {
             try
             {
-                ProcessStartInfo psi = new ProcessStartInfo
+                LogToFile($"Launching legendary.exe {commandArguments}");
+                var psi = new ProcessStartInfo
                 {
                     FileName = legendaryPath,
                     Arguments = commandArguments,
-                    UseShellExecute = true,
-                    CreateNoWindow = false // Możesz pozostawić GUI jeśli aplikacja legendary ma GUI
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
                 };
 
-                using Process? process = Process.Start(psi);
-                if (process != null)
+                using var process = new Process
                 {
-                    // Możesz oczekiwać na zakończenie procesu, jeśli jest to wymagane
-                    process.WaitForExit();
-                }
+                    StartInfo = psi,
+                    EnableRaisingEvents = true
+                };
+
+                process.OutputDataReceived += (s, e) =>
+                {
+                    if (string.IsNullOrEmpty(e.Data)) return;
+                    LegendaryOutput?.Invoke(e.Data);
+                    lock (_fileLock)
+                        File.AppendAllText(legendaryLogFilePath, e.Data + Environment.NewLine);
+                };
+                process.ErrorDataReceived += (s, e) =>
+                {
+                    if (string.IsNullOrEmpty(e.Data)) return;
+                    var line = "[ERR] " + e.Data;
+                    LegendaryOutput?.Invoke(line);
+                    lock (_fileLock)
+                        File.AppendAllText(legendaryLogFilePath, line + Environment.NewLine);
+                };
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                await Task.Run(() => process.WaitForExit());
+
+                var exitMsg = $"Process exited with code {process.ExitCode}";
+                LegendaryOutput?.Invoke(exitMsg);
+                LogToFile(exitMsg);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Wystąpił błąd podczas operacji: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                LogToFile($"ERROR running legendary.exe {commandArguments}: {ex}");
+                MessageBox.Show(
+                    $"Wystąpił błąd podczas uruchamiania legendary.exe: {ex.Message}",
+                    "Błąd",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
             }
         }
 
