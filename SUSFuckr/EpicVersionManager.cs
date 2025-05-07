@@ -22,7 +22,7 @@ namespace SUSFuckr
         {
             legendaryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.exe");
             manifestDirectory = AppDomain.CurrentDomain.BaseDirectory;
-            installDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody");
+            installDirectory = PathSettings.ModsInstallPath;
             appSettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json"); // Inicjalizacja ścieżki w konstruktorze
 
         }
@@ -161,7 +161,7 @@ namespace SUSFuckr
             }
             else
             {
-                installDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody", modConfig.ModName);
+                installDirectory = Path.Combine(PathSettings.ModsInstallPath, modConfig.ModName);
             }
             Directory.CreateDirectory(installDirectory);
             string commandArguments;

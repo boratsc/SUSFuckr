@@ -23,7 +23,7 @@ namespace SUSFuckr
         public static void SaveLocalConfig()
         {
             string sourceDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"AppData\LocalLow\Innersloth\Among Us");
-            string configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody", "Konfiguracje");
+            string configDir = Path.Combine(PathSettings.ModsInstallPath, "Konfiguracje");
 
             if (!Directory.Exists(configDir))
             {
@@ -52,7 +52,7 @@ namespace SUSFuckr
         // Metoda do ładowania konfiguracji lokalnej
         public static void LoadLocalConfig()
         {
-            string configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody", "Konfiguracje");
+            string configDir = Path.Combine(PathSettings.ModsInstallPath, "Konfiguracje");
             if (!Directory.Exists(configDir))
             {
                 MessageBox.Show("Nie znaleziono katalogu konfiguracji.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);

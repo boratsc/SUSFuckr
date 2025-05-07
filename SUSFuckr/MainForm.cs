@@ -149,6 +149,12 @@ namespace SUSFuckr
             updateApplicationItem.MouseHover += (s, ev) => toolTip.Show("Pobiera najnowszą wersję aplikacji", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             additionalActionsMenuItem.DropDownItems.Add(updateApplicationItem);
 
+            ToolStripMenuItem pathSettingsMenuItem = new ToolStripMenuItem("Zmień ścieżkę instalacji modów");
+            pathSettingsMenuItem.Click += new EventHandler(PathSettingsMenuItem_Click);
+            pathSettingsMenuItem.MouseHover += (s, ev) => toolTip.Show("Pozwala zmienić domyślną lokalizację instalacji modów", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
+            additionalActionsMenuItem.DropDownItems.Add(pathSettingsMenuItem);
+
+
             menuStrip.Items.Add(additionalActionsMenuItem);
 
             ToolStripMenuItem dllModsMenuItem = new ToolStripMenuItem("Modyfikacje DLL");
@@ -196,6 +202,14 @@ namespace SUSFuckr
 
             this.MainMenuStrip = menuStrip;
             this.Controls.Add(menuStrip);
+        }
+
+        private void PathSettingsMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var pathSettingsForm = new PathSettingsForm())
+            {
+                pathSettingsForm.ShowDialog(this);
+            }
         }
 
         private void LobbySet()
