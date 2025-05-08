@@ -27,7 +27,7 @@ namespace SUSFuckr
             legendaryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.exe");
             manifestDirectory = AppDomain.CurrentDomain.BaseDirectory;
             installDirectory = PathSettings.ModsInstallPath;
-            appSettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json"); // Inicjalizacja ścieżki w konstruktorze
+            appSettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json"); 
 
             logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "epic.log.txt");
             legendaryLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.log.txt");
@@ -53,10 +53,8 @@ namespace SUSFuckr
             {
                 LogToFile("Sprawdzanie zainstalowanych aplikacji (legendary.exe list-installed --json)");
 
-                // przygotuj temp plik
                 string tempFile = Path.Combine(Path.GetTempPath(), "tempepic.json");
 
-                // uruchom legendary list-installed --json
                 var psi = new ProcessStartInfo
                 {
                     FileName = legendaryPath,
@@ -68,36 +66,75 @@ namespace SUSFuckr
                 };
 
                 using var proc = Process.Start(psi);
-                string stdout = await proc!.StandardOutput.ReadToEndAsync();
-                string stderr = await proc.StandardError.ReadToEndAsync();
-                proc.WaitForExit();
+                if (proc == null)
+                {
+                    LogToFile("Nie udało się uruchomić procesu legendary.exe");
+                    return null;
+                }
 
-                // zapisz JSON do pliku
+                string stdout = await proc.StandardOutput.ReadToEndAsync();
+                string stderr = await proc.StandardError.ReadToEndAsync();
+                await proc.WaitForExitAsync();
+
+                if (string.IsNullOrWhiteSpace(stdout))
+                {
+                    LogToFile("Otrzymany JSON jest pusty → brak zainstalowanych aplikacji");
+                    // fallback na ścieżkę vanilla
+                    var configs = ConfigManager.LoadConfig();
+                    var vanilla = configs.FirstOrDefault(c => c.Id == 0);
+                    if (vanilla != null && !string.IsNullOrEmpty(vanilla.InstallPath))
+                    {
+                        LogToFile($"Fallback ścieżki vanilla: {vanilla.InstallPath}");
+                        return vanilla.InstallPath;
+                    }
+                    return null;
+                }
+
                 File.WriteAllText(tempFile, stdout);
 
-                // zdeserializuj
-                var apps = JsonSerializer.Deserialize<List<InstalledApp>>(stdout)
+                List<InstalledApp> apps;
+                try
+                {
+                    apps = JsonSerializer.Deserialize<List<InstalledApp>>(stdout)
                            ?? new List<InstalledApp>();
+                }
+                catch (JsonException jsonEx)
+                {
+                    LogToFile($"Błąd parsowania JSON z legendary list-installed: {jsonEx.Message}");
+                    return null;
+                }
+
+                // wczytaj configy tylko raz
+                var configsAll = ConfigManager.LoadConfig();
+                var vanillaCfg = configsAll.FirstOrDefault(c => c.Id == 0);
+
+                // 1) wyszukaj wpis
                 var entry = apps.FirstOrDefault(a => a.app_name == EpicAppId);
                 if (entry == null)
                 {
                     LogToFile($"Brak pozycji {EpicAppId} w tempepic.json");
+                    // spróbuj naprawić manifest używając ścieżki vanilla
+                    if (vanillaCfg != null && !string.IsNullOrEmpty(vanillaCfg.InstallPath))
+                    {
+                        LogToFile($"Naprawiam brakujący wpis, override ścieżki na: {vanillaCfg.InstallPath}");
+                        await RunLegendaryCommandAsync(
+                            $"repair {EpicAppId} --override-install-path \"{vanillaCfg.InstallPath}\" -y");
+                        return vanillaCfg.InstallPath;
+                    }
                     return null;
                 }
 
+                // 2) wpis znaleziony
                 string foundPath = entry.install_path;
                 LogToFile($"Legendary zwraca ścieżkę: {foundPath}");
 
-                // pobierz config vanilla (Id == 0)
-                var configs = ConfigManager.LoadConfig();
-                var vanilla = configs.FirstOrDefault(c => c.Id == 0);
-                if (vanilla != null &&
-                    !string.Equals(vanilla.InstallPath, foundPath, StringComparison.OrdinalIgnoreCase))
+                // 3) porównaj z config.json (vanilla) i naprawiaj jeżeli różne
+                if (vanillaCfg != null &&
+                    !string.Equals(vanillaCfg.InstallPath, foundPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    LogToFile($"Różnica ścieżek: config.json='{vanilla.InstallPath}', legendary='{foundPath}'. Naprawiam...");
-                    // naprawa
+                    LogToFile($"Różnica ścieżek: config.json='{vanillaCfg.InstallPath}', legendary='{foundPath}'. Naprawiam...");
                     await RunLegendaryCommandAsync(
-                        $"repair {EpicAppId} --override-install-path \"{vanilla.InstallPath}\" -y");
+                        $"repair {EpicAppId} --override-install-path \"{vanillaCfg.InstallPath}\" -y");
                 }
 
                 return foundPath;
@@ -109,7 +146,7 @@ namespace SUSFuckr
             }
         }
 
-        // 2) zdefiniuj klasę pomocniczą dla JSON
+
         private class InstalledApp
         {
             public string app_name { get; set; }
@@ -187,9 +224,25 @@ namespace SUSFuckr
             {
                 MessageBox.Show("Konfiguracja gry jest nieprawidłowa.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
-            }       
+            }
+
+            if (!File.Exists(legendaryPath))
+            {
+                await DownloadLegendaryAsync();
+            }
 
             await RunLegendaryCommandAsync("auth --import");
+            string installDirectory;
+            if (modConfig.Id == 0)
+            {
+                installDirectory = modConfig.InstallPath.Replace("AmongUs", "").TrimEnd(Path.DirectorySeparatorChar);
+            }
+            else
+            {
+                installDirectory = Path.Combine(PathSettings.ModsInstallPath, modConfig.ModName);
+            }
+            await RunLegendaryCommandAsync("uninstall 963137e4c29d4c79a81323b8fab03a40 --keep-files -y");
+            await RunLegendaryCommandAsync($"import 963137e4c29d4c79a81323b8fab03a40 \"{installDirectory}\" -y");
 
             await CheckInstalledAppsAsync();
 
@@ -200,10 +253,7 @@ namespace SUSFuckr
                 return;
             }
 
-            if (!File.Exists(legendaryPath))
-            {
-                await DownloadLegendaryAsync();
-            }
+
 
             string amongVersionFormatted = modConfig.AmongVersion?.Replace("-", ".") ?? string.Empty;
 

@@ -14,6 +14,17 @@ using System.IO.Compression; // Dla ZipFile
 
 namespace SUSFuckr
 {
+
+    public static class UIOutput
+    {
+        public static event Action<string>? LineLogged;
+
+        public static void Write(string line)
+        {
+            LineLogged?.Invoke(line);
+        }
+    }
+
     public partial class MainForm : Form
     {
         private List<ModConfiguration> modConfigs;
@@ -26,26 +37,30 @@ namespace SUSFuckr
         private ModConfiguration selectedModConfig;
         private ProgressBar progressBarBusy;
         private ToolStripStatusLabel statusLabel;
-        private System.Windows.Forms.RichTextBox txtLegendaryLog;
+       
 
 
         public MainForm()
         {
             InitializeComponent();
 
+            var h = this.Handle;
 
-            this.txtLegendaryLog = new System.Windows.Forms.RichTextBox();
-            // 
-            // txtLegendaryLog
-            // 
-            this.txtLegendaryLog.Location = new System.Drawing.Point(7, 461);
-            this.txtLegendaryLog.Name = "txtLegendaryLog";
-            this.txtLegendaryLog.Size = new System.Drawing.Size(600, 100);
-            this.txtLegendaryLog.TabIndex = 10;
-            this.txtLegendaryLog.Text = "";
-
-            // don't forget to add it to Controls
-            this.Controls.Add(this.txtLegendaryLog);
+            UIOutput.LineLogged += text =>
+            {
+                if (this.IsHandleCreated)
+                {
+                    this.Invoke((Action)(() =>
+                    {
+                        txtLegendaryLog.AppendText(text + Environment.NewLine);
+                        txtLegendaryLog.ScrollToCaret();
+                    }));
+                }
+                else
+                {
+                    // na wszelki wypadek można buforować lub ignorować
+                }
+            };
 
             // Konfiguracja aplikacji
             var builder = new ConfigurationBuilder()
@@ -110,6 +125,8 @@ namespace SUSFuckr
 
             // Dodatkowe konfiguracje
             GameLocator.CheckAndSetupVanillaMod(modConfigs, Configuration);
+            UIOutput.Write("Aplikacja uruchomiona poprawnie");
+            Diagnostics.LogModsAndPlugins();
         }
 
 
@@ -243,7 +260,7 @@ namespace SUSFuckr
 
 
             this.MainMenuStrip = menuStrip;
-            this.Controls.Add(menuStrip);
+            this.Controls.Add(menuStrip);         
         }
 
         private void PathSettingsMenuItem_Click(object sender, EventArgs e)
@@ -390,11 +407,11 @@ namespace SUSFuckr
                         if (File.Exists(dllPath))
                         {
                             File.Delete(dllPath);
-                            Console.WriteLine($"Plik {dllPath} został usunięty.");
+                            UIOutput.Write($"Plik {dllPath} został usunięty.");
                         }
                         else
                         {
-                            Console.WriteLine($"Plik {dllPath} nie istnieje.");
+                            UIOutput.Write($"Plik {dllPath} nie istnieje.");
                         }
                     }
                     catch (Exception ex)
@@ -1240,6 +1257,8 @@ namespace SUSFuckr
                 gameIcon.Refresh();
             }
         }
+
+
 
     }
 
