@@ -233,16 +233,18 @@ namespace SUSFuckr
 
             await RunLegendaryCommandAsync("auth --import");
 
-
+            string installDirectory;
             int lastLaunchId = GetLastLaunchId();
             if (modConfig.Id == lastLaunchId)
             {
+                installDirectory = modConfig.InstallPath;
+                await RunLegendaryCommandAsync($"import 963137e4c29d4c79a81323b8fab03a40 \"{installDirectory}\" -y");
                 await LaunchGameAsync();
                 return;
             }
 
 
-            string installDirectory;
+            
             if (modConfig.Id == 0)
             {
                 installDirectory = modConfig.InstallPath.Replace("AmongUs", "").TrimEnd(Path.DirectorySeparatorChar);
