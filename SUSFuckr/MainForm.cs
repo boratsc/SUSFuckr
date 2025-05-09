@@ -735,6 +735,7 @@ namespace SUSFuckr
                         }
 
                         gameIcon.Click += GameIcon_Click;
+                        gameIcon.MouseUp += GameIcon_MouseUp;
                         this.scrollablePanel.Controls.Add(gameIcon);
 
                         var labelGame = new Label
@@ -759,6 +760,45 @@ namespace SUSFuckr
             }
         }
 
+        private void GameIcon_MouseUp(object? sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                var clickedIcon = sender as PictureBox;
+                if (clickedIcon != null)
+                {
+                    string clickedModName = clickedIcon.Name.Replace("gameIcon_", "");
+                    var clickedModConfig = modConfigs.FirstOrDefault(config => config.ModName == clickedModName);
+
+                    if (clickedModConfig != null &&
+                        !string.IsNullOrEmpty(clickedModConfig.InstallPath) &&
+                        Directory.Exists(clickedModConfig.InstallPath))
+                    {
+                        ContextMenuStrip contextMenu = new ContextMenuStrip();
+
+                        // Opcja "Przejdź do folderu moda"
+                        ToolStripMenuItem openFolderItem = new ToolStripMenuItem("Przejdź do folderu moda");
+                        openFolderItem.Click += (s, args) =>
+                        {
+                            try
+                            {
+                                Process.Start("explorer.exe", clickedModConfig.InstallPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"Nie udało się otworzyć folderu: {ex.Message}",
+                                    "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        };
+                        contextMenu.Items.Add(openFolderItem);
+
+                        // Wyświetl menu kontekstowe w miejscu kliknięcia
+                        contextMenu.Show(clickedIcon, e.Location);
+                    }
+                }
+            }
+        }
+
         private void AddGameIcon(ModConfiguration config)
         {
             try
@@ -774,6 +814,7 @@ namespace SUSFuckr
                 };
                 originalImages[gameIcon] = new Bitmap(gameIcon.Image);
                 gameIcon.Click += GameIcon_Click;
+                gameIcon.MouseUp += GameIcon_MouseUp;
                 this.scrollablePanel.Controls.Add(gameIcon);
 
                 var labelGame = new Label
