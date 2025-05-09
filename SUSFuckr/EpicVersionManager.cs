@@ -232,6 +232,16 @@ namespace SUSFuckr
             }
 
             await RunLegendaryCommandAsync("auth --import");
+
+
+            int lastLaunchId = GetLastLaunchId();
+            if (modConfig.Id == lastLaunchId)
+            {
+                await LaunchGameAsync();
+                return;
+            }
+
+
             string installDirectory;
             if (modConfig.Id == 0)
             {
@@ -244,13 +254,39 @@ namespace SUSFuckr
             await RunLegendaryCommandAsync("uninstall 963137e4c29d4c79a81323b8fab03a40 --keep-files -y");
             await RunLegendaryCommandAsync($"import 963137e4c29d4c79a81323b8fab03a40 \"{installDirectory}\" -y");
 
-            await CheckInstalledAppsAsync();
+            // najpierw spróbuj sprawdzić / naprawić istniejącą instalację
+            string? foundPath = await CheckInstalledAppsAsync();
 
-            int lastLaunchId = GetLastLaunchId();
-            if (modConfig.Id == lastLaunchId)
+            // jeżeli repair nie zadziałał (foundPath == null) → wymuś install
+            if (string.IsNullOrEmpty(foundPath))
             {
-                await LaunchGameAsync();
-                return;
+                // oblicz base-path i ewentualny manifest
+                string basePath = modConfig.InstallPath;
+                string manifestFile = Path.Combine(
+                    manifestDirectory,
+                    $"{EpicAppId}_{modConfig.AmongVersion.Replace("-", ".")}.manifest");
+
+                string installArgs;
+                if (modConfig.Id == 0)
+                {
+                    // vanilla instalacja (bez manifestu)
+                    installArgs =
+                      $"install {EpicAppId} --base-path \"{basePath}\" -y";
+                }
+                else
+                {
+                    // moda instalacja (z manifestem)
+                    installArgs =
+                      $"install {EpicAppId} -y " +
+                      $"--manifest \"{manifestFile}\" " +
+                      $"--base-path \"{basePath}\"";
+                }
+
+                LogToFile($"Repair nie powiódł się → fallback install: {installArgs}");
+                await RunLegendaryCommandAsync(installArgs);
+
+                // po installu przyjmujemy, że basePath jest poprawny
+                foundPath = basePath;
             }
 
 
