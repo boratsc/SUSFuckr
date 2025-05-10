@@ -21,6 +21,18 @@ Głównym celem projektu jest umożliwienie każdemu — niezależnie od poziomu
 
 ![image](https://github.com/user-attachments/assets/f9279f5e-270d-44ec-9ea8-d0352e197048)
 
+---
+
+## Wymagania
+
+- Windows 10 lub 11
+- .NET Runtime w wersji 8.0 lub nowszej
+
+## Instalacja
+
+1. Pobierz najnowszą wersję aplikacji z zakładki „Releases”.
+2. Uruchom plik `.exe` **lub** rozpakuj archiwum `.zip` w dowolne miejsce.
+3. Gotowe — aplikacja nie wymaga instalacji systemowej ani konfiguracji.
 
 ---
 
@@ -44,17 +56,6 @@ Development is actively supported by the **[Psychopaci](https://discord.com/invi
 ## Core Principles
 
 The primary goal of this project is to make modding accessible for everyone — from complete beginners to experienced players. **susfuckr** handles the complexity behind the scenes: ensuring correct installation, matching game versions, and setting everything up in a seamless and user-friendly environment.
-
-## Wymagania
-
-- Windows 10 lub 11
-- .NET Runtime w wersji 8.0 lub nowszej
-
-## Instalacja
-
-1. Pobierz najnowszą wersję aplikacji z zakładki „Releases”.
-2. Uruchom plik `.exe` **lub** rozpakuj archiwum `.zip` w dowolne miejsce.
-3. Gotowe — aplikacja nie wymaga instalacji systemowej ani konfiguracji.
 
 ---
 
