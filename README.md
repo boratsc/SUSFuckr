@@ -11,7 +11,6 @@ Projekt aktywnie rozwijany jest we współpracy ze społecznością **[Psychopac
 - Zarządzanie, instalacja i agregowanie modów do Among Us
 - Instalacja dodatkowych plików DLL rozszerzających funkcjonalność gry
 - Obsługa konfiguracji dla modyfikacji takich jak *Town of Us*
-- Zestaw narzędzi ułatwiających organizację gier i sesji
 - Możliwość tworzenia lobby dla więcej niż 15 graczy
 - Intuicyjny i przyjazny dla użytkownika interfejs
 
@@ -49,7 +48,6 @@ Development is actively supported by the **[Psychopaci](https://discord.com/invi
 - Manage, install, and bundle multiple mods for *Among Us*
 - Install additional DLL files to extend the game's functionality
 - Manage configuration files for mods like *Town of Us*
-- A collection of tools for organizing games and hosting sessions
 - Support for lobbies with more than 15 players
 - Clean, user-friendly interface
 
