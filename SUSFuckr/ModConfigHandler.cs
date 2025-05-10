@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.IO;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -6,7 +6,7 @@ using System.Windows.Forms;
 using Microsoft.Extensions.Configuration;
 using System.IO.Compression;
 using System.Net.Sockets;
-using Newtonsoft.Json; // Upewnij siê, ¿e dodasz odpowiedni¹ przestrzeñ do u¿ycia JsonConvert
+using Newtonsoft.Json; // Upewnij siÄ™, Å¼e dodasz odpowiedniÄ… przestrzeÅ„ do uÅ¼ycia JsonConvert
 
 namespace SUSFuckr
 {
@@ -23,45 +23,45 @@ namespace SUSFuckr
         public static void SaveLocalConfig()
         {
             string sourceDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"AppData\LocalLow\Innersloth\Among Us");
-            string configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody", "Konfiguracje");
+            string configDir = Path.Combine(PathSettings.ModsInstallPath, "Konfiguracje");
 
             if (!Directory.Exists(configDir))
             {
                 Directory.CreateDirectory(configDir);
             }
 
-            // Okno dialogowe pozwalaj¹ce u¿ytkownikowi wpisaæ nazwê konfiguracji
-            string configName = Prompt.ShowDialog("Wpisz nazwê konfiguracji:", "Nazwa konfiguracji");
+            // Okno dialogowe pozwalajÄ…ce uÅ¼ytkownikowi wpisaÄ‡ nazwÄ™ konfiguracji
+            string configName = Prompt.ShowDialog("Wpisz nazwÄ™ konfiguracji:", "Nazwa konfiguracji");
 
-            // U¿ycie nazwy konfiguracji lub daty jeœli brak nazwy
+            // UÅ¼ycie nazwy konfiguracji lub daty jeÅ›li brak nazwy
             string zipFileName = string.IsNullOrWhiteSpace(configName) ? $"Konfiguracja z dnia - {DateTime.Now:yyyyMMddHHmmss}.zip" : $"{configName}.zip";
             string destinationPath = Path.Combine(configDir, zipFileName);
 
             using (var zipStream = new FileStream(destinationPath, FileMode.Create))
             using (var archive = new ZipArchive(zipStream, ZipArchiveMode.Create))
             {
-                foreach (var filePath in Directory.GetFiles(sourceDir, "Saved Settings *.txt"))
+                foreach (var filePath in Directory.GetFiles(sourceDir, "*.txt"))
                 {
                     archive.CreateEntryFromFile(filePath, Path.GetFileName(filePath));
                 }
             }
 
-            MessageBox.Show("Konfiguracja zosta³a zapisana lokalnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Konfiguracja zostaÅ‚a zapisana lokalnie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        // Metoda do ³adowania konfiguracji lokalnej
+        // Metoda do Å‚adowania konfiguracji lokalnej
         public static void LoadLocalConfig()
         {
-            string configDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody", "Konfiguracje");
+            string configDir = Path.Combine(PathSettings.ModsInstallPath, "Konfiguracje");
             if (!Directory.Exists(configDir))
             {
-                MessageBox.Show("Nie znaleziono katalogu konfiguracji.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Nie znaleziono katalogu konfiguracji.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             string[] files = Directory.GetFiles(configDir, "*.zip");
             if (files.Length == 0)
             {
-                MessageBox.Show("Nie znaleziono zapisanych konfiguracji.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Nie znaleziono zapisanych konfiguracji.", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             if (files.Length == 1)
@@ -99,7 +99,7 @@ namespace SUSFuckr
             string tempFilePath = Path.Combine(tempDir, hashFileName);
             try
             {
-                var filesToZip = Directory.GetFiles(sourceDir, "Saved Settings *.txt");
+                var filesToZip = Directory.GetFiles(sourceDir, "*.txt");
                 if (filesToZip.Length == 0)
                 {
                     MessageBox.Show("No files available to zip.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -116,10 +116,10 @@ namespace SUSFuckr
             }
             catch (Exception ex)
             {
-                string errorMessage = $"Wyst¹pi³ b³¹d podczas tworzenia pliku ZIP: {ex}";
+                string errorMessage = $"WystÄ…piÅ‚ bÅ‚Ä…d podczas tworzenia pliku ZIP: {ex}";
                 Console.WriteLine(errorMessage);
                 LogErrorToFile(errorMessage);
-                MessageBox.Show(errorMessage, "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(errorMessage, "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
@@ -144,36 +144,36 @@ namespace SUSFuckr
                 var response = await client.PostAsync(serverUrl, content);
                 if (response.IsSuccessStatusCode)
                 {
-                    ShowHashDialog(hash);  // Wyœwietl hash w oknie dialogowym
+                    ShowHashDialog(hash);  // WyÅ›wietl hash w oknie dialogowym
                     AddConfigToJSON(hash); // Dodaj hash do pliku JSON
-                    MessageBox.Show("Konfiguracja zosta³a zapisana na serwerze.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Konfiguracja zostaÅ‚a zapisana na serwerze.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    MessageBox.Show("B³¹d podczas zapisu. Kod statusu: " + response.StatusCode, "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show("BÅ‚Ä…d podczas zapisu. Kod statusu: " + response.StatusCode, "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (HttpRequestException ex)
             {
-                string errorMessage = $"Wyst¹pi³ b³¹d przy zapisywaniu konfiguracji: {ex}";
+                string errorMessage = $"WystÄ…piÅ‚ bÅ‚Ä…d przy zapisywaniu konfiguracji: {ex}";
                 Console.WriteLine(errorMessage);
                 LogErrorToFile(errorMessage);
-                MessageBox.Show($"Wyst¹pi³ b³¹d przy zapisywaniu konfiguracji: {ex.Message}", "B³¹d HTTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"WystÄ…piÅ‚ bÅ‚Ä…d przy zapisywaniu konfiguracji: {ex.Message}", "BÅ‚Ä…d HTTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                string errorMessage = $"Wyst¹pi³ nieoczekiwany b³¹d: {ex}";
+                string errorMessage = $"WystÄ…piÅ‚ nieoczekiwany bÅ‚Ä…d: {ex}";
                 Console.WriteLine(errorMessage);
                 LogErrorToFile(errorMessage);
-                MessageBox.Show($"Wyst¹pi³ nieoczekiwany b³¹d: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"WystÄ…piÅ‚ nieoczekiwany bÅ‚Ä…d: {ex.Message}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                // Usunêcie tymczasowego folderu
+                // UsunÄ™cie tymczasowego folderu
                 if (Directory.Exists(tempDir))
                 {
                     Directory.Delete(tempDir, true);
-                    Console.WriteLine("Tymczasowy folder zosta³ usuniêty.");
+                    Console.WriteLine("Tymczasowy folder zostaÅ‚ usuniÄ™ty.");
                 }
             }
         }
@@ -197,7 +197,7 @@ namespace SUSFuckr
             {
                 Width = 500,
                 Height = 250,
-                Text = "Za³aduj konfiguracjê"
+                Text = "ZaÅ‚aduj konfiguracjÄ™"
             };
             Label textLabel = new Label() { Left = 50, Top = 20, Text = "Podaj kod konfiguracji:" };
             TextBox textBox = new TextBox() { Left = 50, Top = 50, Width = 400 };
@@ -205,9 +205,9 @@ namespace SUSFuckr
             {
                 Left = 50,
                 Top = 80,
-                Width = 400, // Zwiêkszona szerokoœæ
+                Width = 400, // ZwiÄ™kszona szerokoÅ›Ä‡
                 AutoSize = true, // Automatyczne dopasowanie do tekstu
-                Text = "Lub wybierz z wczeœniej przes³anych:"
+                Text = "Lub wybierz z wczeÅ›niej przesÅ‚anych:"
             };
             ComboBox comboBox = new ComboBox() { Left = 50, Top = 105, Width = 400 };
             comboBox.DropDownStyle = ComboBoxStyle.DropDownList;
@@ -229,7 +229,7 @@ namespace SUSFuckr
                 else if (comboBox.SelectedIndex >= 0)
                 {
                     var selectedItem = comboBox?.SelectedItem?.ToString();
-                    hash = selectedItem?.Split('-').Last().Trim(); // Wyci¹gnij tylko hash
+                    hash = selectedItem?.Split('-').Last().Trim(); // WyciÄ…gnij tylko hash
                 }
                 form.DialogResult = DialogResult.OK;
                 form.Close();
@@ -240,7 +240,7 @@ namespace SUSFuckr
             form.Controls.Add(comboBox);
             form.Controls.Add(confirmation);
             if (form.ShowDialog() != DialogResult.OK || string.IsNullOrWhiteSpace(hash)) return;
-            // Kontynuacja procesu ³adowania konfiguracji...
+            // Kontynuacja procesu Å‚adowania konfiguracji...
             var baseUrl = _configuration["Configuration:BaseUrl"];
             var apiPort = _configuration["Configuration:ApiPort"];
             var downloadEndpoint = _configuration["Configuration:DownloadEndpoint"];
@@ -265,33 +265,33 @@ namespace SUSFuckr
                         await response.Content.CopyToAsync(fs);
                     }
                     LoadConfigFromFile(tempFilePath);
-                    MessageBox.Show("Konfiguracja z serwera zosta³a pomyœlnie wczytana.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Konfiguracja z serwera zostaÅ‚a pomyÅ›lnie wczytana.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    MessageBox.Show($"Nie uda³o siê pobraæ konfiguracji z serwera. Kod statusu: {response.StatusCode}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"Nie udaÅ‚o siÄ™ pobraÄ‡ konfiguracji z serwera. Kod statusu: {response.StatusCode}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (HttpRequestException ex)
             {
-                string errorMessage = $"Wyst¹pi³ b³¹d przy pobieraniu konfiguracji: {ex}";
+                string errorMessage = $"WystÄ…piÅ‚ bÅ‚Ä…d przy pobieraniu konfiguracji: {ex}";
                 Console.WriteLine(errorMessage);
                 LogErrorToFile(errorMessage);
-                MessageBox.Show($"Wyst¹pi³ b³¹d przy pobieraniu konfiguracji: {ex.Message}", "B³¹d HTTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"WystÄ…piÅ‚ bÅ‚Ä…d przy pobieraniu konfiguracji: {ex.Message}", "BÅ‚Ä…d HTTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (SocketException ex)
             {
-                string errorMessage = $"Nie uda³o siê po³¹czyæ z serwerem. Szczegó³y: {ex}";
+                string errorMessage = $"Nie udaÅ‚o siÄ™ poÅ‚Ä…czyÄ‡ z serwerem. SzczegÃ³Å‚y: {ex}";
                 Console.WriteLine(errorMessage);
                 LogErrorToFile(errorMessage);
-                MessageBox.Show($"Nie uda³o siê po³¹czyæ z serwerem. Szczegó³y: {ex.Message}", "B³¹d po³¹czenia", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Nie udaÅ‚o siÄ™ poÅ‚Ä…czyÄ‡ z serwerem. SzczegÃ³Å‚y: {ex.Message}", "BÅ‚Ä…d poÅ‚Ä…czenia", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             catch (Exception ex)
             {
-                string errorMessage = $"Wyst¹pi³ nieoczekiwany b³¹d: {ex}";
+                string errorMessage = $"WystÄ…piÅ‚ nieoczekiwany bÅ‚Ä…d: {ex}";
                 Console.WriteLine(errorMessage);
                 LogErrorToFile(errorMessage);
-                MessageBox.Show($"Wyst¹pi³ nieoczekiwany b³¹d: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"WystÄ…piÅ‚ nieoczekiwany bÅ‚Ä…d: {ex.Message}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -302,13 +302,13 @@ namespace SUSFuckr
             {
                 foreach (var entry in archive.Entries)
                 {
-                    if (entry.Name.StartsWith("Saved Settings") && entry.Name.EndsWith(".txt"))
+                    if (entry.Name.EndsWith(".txt"))
                     {
                         entry.ExtractToFile(Path.Combine(destinationDir, entry.Name), true);
                     }
                 }
             }
-            MessageBox.Show("Konfiguracja zosta³a wczytana.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show("Konfiguracja zostaÅ‚a wczytana.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private static void LogErrorToFile(string message)
@@ -321,21 +321,21 @@ namespace SUSFuckr
             }
         }
 
-        // Dialog wyœwietlaj¹cy hash
+        // Dialog wyÅ›wietlajÄ…cy hash
         public static void ShowHashDialog(string hash)
         {
             Form prompt = new Form
             {
                 Width = 400,
                 Height = 200,
-                Text = "Hash Has³a"
+                Text = "Hash HasÅ‚a"
             };
             Label textLabel = new Label
             {
                 Left = 50,
                 Top = 20,
                 Width = 300,
-                Text = "Twój kod: " + hash
+                Text = "TwÃ³j kod: " + hash
             };
             TextBox textBox = new TextBox
             {
@@ -383,10 +383,10 @@ namespace SUSFuckr
 
         public static void LoadLocalTxtConfig()
         {
-            // Œcie¿ka docelowa do zapisania konfiguracji
+            // ÅšcieÅ¼ka docelowa do zapisania konfiguracji
             string targetDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"AppData\LocalLow\Innersloth\Among Us");
 
-            // U¿ywamy okna dialogowego, ¿eby u¿ytkownik móg³ wybraæ plik
+            // UÅ¼ywamy okna dialogowego, Å¼eby uÅ¼ytkownik mÃ³gÅ‚ wybraÄ‡ plik
             using var openFileDialog = new OpenFileDialog
             {
                 Title = "Wybierz plik konfiguracyjny",
@@ -397,20 +397,121 @@ namespace SUSFuckr
             {
                 string selectedFilePath = openFileDialog.FileName;
 
-                // Œcie¿ka docelowa do zapisania pliku w Among Us
+                // ÅšcieÅ¼ka docelowa do zapisania pliku w Among Us
                 string destinationFilePath = Path.Combine(targetDir, Path.GetFileName(selectedFilePath));
 
                 try
                 {
                     File.Copy(selectedFilePath, destinationFilePath, overwrite: true);
-                    MessageBox.Show("Konfiguracja zosta³a wczytana z pliku txt.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Konfiguracja zostaÅ‚a wczytana z pliku txt.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show($"B³¹d podczas ³adowania konfiguracji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"BÅ‚Ä…d podczas Å‚adowania konfiguracji: {ex.Message}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
+
+        public static void ChangePresetNames()
+        {
+            string targetDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), @"AppData\LocalLow\Innersloth\Among Us");
+            var txtFiles = Directory.GetFiles(targetDir, "*.txt");
+
+            int baseHeight = 100; // Podstawowa wysokoÅ›Ä‡ (np. gÃ³rna czÄ™Å›Ä‡ okna)
+            int itemHeight = 25; // WysokoÅ›Ä‡ kaÅ¼dego zestawu Label i TextBox
+            int maxWindowHeight = Screen.PrimaryScreen.WorkingArea.Height - 100; // Maksymalna wysokoÅ›Ä‡ okna, np. 100 pixeli mniej niÅ¼ wysokoÅ›Ä‡ ekranu 
+
+            int calculatedHeight = baseHeight + (txtFiles.Length * itemHeight) + 60; // 70 pixeli to miejsce na przycisk Zapisz
+            int finalWindowHeight = Math.Min(calculatedHeight, maxWindowHeight);  // Finalna wysokoÅ›Ä‡ ograniczona do maxWindowHeight
+
+            Form form = new Form
+            {
+                Width = 350,
+                Height = finalWindowHeight,
+                Text = "ZmieÅ„ nazwy presetÃ³w lobby"
+            };
+
+            Panel panel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                AutoScroll = true
+            };
+
+            int verticalOffset = 10;
+
+            Dictionary<TextBox, string> fileTextBoxMap = new Dictionary<TextBox, string>();
+
+            foreach (var file in txtFiles)
+            {
+                string fullFileName = Path.GetFileName(file);
+                string fileNameWithoutExtension = Path.GetFileNameWithoutExtension(file); // UsuÅ„ rozszerzenie .txt
+
+                Label label = new Label
+                {
+                    Text = $"{fileNameWithoutExtension} â†’",
+                    Left = 10,
+                    Top = verticalOffset,
+                    AutoSize = true
+                };
+
+                TextBox textBox = new TextBox
+                {
+                    Text = fileNameWithoutExtension, // PokaÅ¼ nazwÄ™ bez .txt
+                    Left = label.Right + 28,
+                    Top = verticalOffset,
+                    Width = 180, // Mniejsza szerokoÅ›Ä‡ TextBox
+                    MaxLength = 20 // Ograniczenie iloÅ›ci znakÃ³w
+                };
+
+                fileTextBoxMap[textBox] = file;
+
+                panel.Controls.Add(label);
+                panel.Controls.Add(textBox);
+
+                verticalOffset += textBox.Height + 10;
+            }
+
+            Button saveButton = new Button
+            {
+                Text = "Zapisz",
+                Left = form.Width - 100,
+                Width = 80,
+                Top = finalWindowHeight - 60, // Pozycja dopasowana do wysokoÅ›ci okna
+                Dock = DockStyle.Bottom
+            };
+
+            saveButton.Click += (sender, e) =>
+            {
+                foreach (var entry in fileTextBoxMap)
+                {
+                    var textBox = entry.Key;
+                    var originalFilePath = entry.Value;
+
+                    string newFileNameWithoutExtension = textBox.Text.Trim();
+                    string newFileName = newFileNameWithoutExtension + ".txt"; // Dodaj rozszerzenie .txt
+                    if (!string.IsNullOrEmpty(newFileNameWithoutExtension) && newFileName != Path.GetFileName(originalFilePath))
+                    {
+                        string newFilePath = Path.Combine(targetDir, newFileName);
+                        try
+                        {
+                            File.Move(originalFilePath, newFilePath);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"BÅ‚Ä…d podczas zmiany nazwy pliku {originalFilePath}: {ex.Message}", "BÅ‚Ä…d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                }
+
+                MessageBox.Show("Zmiany zostaÅ‚y zapisane.", "Informacja", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                form.Close();
+            };
+
+            form.Controls.Add(panel);
+            form.Controls.Add(saveButton);
+            form.ShowDialog();
+        }
+
     }
 
     public static class Prompt
@@ -430,7 +531,7 @@ namespace SUSFuckr
             prompt.Controls.Add(textBox);
             prompt.Controls.Add(confirmation);
             prompt.Controls.Add(textLabel);
-            prompt.AcceptButton = confirmation; // Umo¿liwia ENTER jako przycisk OK
+            prompt.AcceptButton = confirmation; // UmoÅ¼liwia ENTER jako przycisk OK
             return prompt.ShowDialog() == DialogResult.OK ? textBox.Text : string.Empty;
         }
     }

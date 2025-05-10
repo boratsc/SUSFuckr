@@ -13,6 +13,7 @@
         private System.Windows.Forms.Button btnUpdateMod;
         private System.Windows.Forms.Panel contentPanel;
         private System.Windows.Forms.Panel scrollablePanel;
+        private System.Windows.Forms.RichTextBox txtLegendaryLog;
         private System.Windows.Forms.ProgressBar progressBar; // Dodaj kontrolkę ProgressBar
 
         protected override void Dispose(bool disposing)
@@ -42,8 +43,18 @@
             // MainForm
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(640, 480); // Zwiększona wysokość dla paska
+            this.ClientSize = new System.Drawing.Size(640, 590); // Zwiększona wysokość dla paska
             this.BackColor = Color.LightGray;
+
+            this.txtLegendaryLog = new System.Windows.Forms.RichTextBox();
+
+            // txtLegendaryLog
+            this.txtLegendaryLog.Location = new System.Drawing.Point(7, 461);
+            this.txtLegendaryLog.Name = "txtLegendaryLog";
+            this.txtLegendaryLog.Size = new System.Drawing.Size(600, 100);
+            this.txtLegendaryLog.TabIndex = 10;
+            this.txtLegendaryLog.Text = "";
+            this.Controls.Add(this.txtLegendaryLog);
 
             // contentPanel
             this.contentPanel.Location = new System.Drawing.Point(7, 160); // Panel o 7px mniejszy niż okno

@@ -49,7 +49,7 @@ namespace SUSFuckr
             // Specyficzna logika dla Steam
             string fileName = $"{modConfig.AmongVersion.Replace("-", "").Replace(".", "")}.zip";
             string fileUrlAmongUs = baseUrl + fileName;
-            string baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody");
+            string baseDirectory = PathSettings.ModsInstallPath;
             Directory.CreateDirectory(baseDirectory);
             string tempFileAmongUs = Path.Combine(baseDirectory, "temp", fileName);
             Directory.CreateDirectory(Path.GetDirectoryName(tempFileAmongUs)!);
@@ -140,7 +140,7 @@ namespace SUSFuckr
             try
             {
                 string dllUrl = modConfig.GitHubRepoOrLink ?? throw new InvalidOperationException("URL DLL jest wymagany.");
-                string baseDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Among Us - mody");
+                string baseDirectory = PathSettings.ModsInstallPath;
                 Directory.CreateDirectory(baseDirectory);
                 string fileName = Path.GetFileName(new Uri(dllUrl).AbsolutePath);
                 string tempDllFile = Path.Combine(baseDirectory, "temp", fileName);

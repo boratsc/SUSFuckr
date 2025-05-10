@@ -14,6 +14,17 @@ using System.IO.Compression; // Dla ZipFile
 
 namespace SUSFuckr
 {
+
+    public static class UIOutput
+    {
+        public static event Action<string>? LineLogged;
+
+        public static void Write(string line)
+        {
+            LineLogged?.Invoke(line);
+        }
+    }
+
     public partial class MainForm : Form
     {
         private List<ModConfiguration> modConfigs;
@@ -24,11 +35,32 @@ namespace SUSFuckr
         private ToolTip toolTip;
         private Updater updater;
         private ModConfiguration selectedModConfig;
+        private ProgressBar progressBarBusy;
+        private ToolStripStatusLabel statusLabel;
        
+
 
         public MainForm()
         {
             InitializeComponent();
+
+            var h = this.Handle;
+
+            UIOutput.LineLogged += text =>
+            {
+                if (this.IsHandleCreated)
+                {
+                    this.Invoke((Action)(() =>
+                    {
+                        txtLegendaryLog.AppendText(text + Environment.NewLine);
+                        txtLegendaryLog.ScrollToCaret();
+                    }));
+                }
+                else
+                {
+                    // na wszelki wypadek można buforować lub ignorować
+                }
+            };
 
             // Konfiguracja aplikacji
             var builder = new ConfigurationBuilder()
@@ -36,10 +68,35 @@ namespace SUSFuckr
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
             Configuration = builder.Build();
 
+            // --- dodaj statusStrip + statusLabel ---
+            var statusStrip = new StatusStrip();
+            statusLabel = new ToolStripStatusLabel();
+            statusStrip.Items.Add(statusLabel);
+            this.Controls.Add(statusStrip);
+
+            // --- dodaj progressBarBusy ---
+            progressBarBusy = new ProgressBar
+            {
+                Style = ProgressBarStyle.Marquee,
+                Width = 200,
+                Height = 20,
+                Dock = DockStyle.Bottom,
+                Visible = false,
+                MarqueeAnimationSpeed = 30
+            };
+            this.Controls.Add(progressBarBusy);
+
+            progressBarBusy.Style = ProgressBarStyle.Marquee;
+            progressBarBusy.MarqueeAnimationSpeed = 30;
+            progressBarBusy.Visible = false;
+
+            statusLabel.Text = "";
+            statusLabel.Visible = false;
+
             appVersion = Configuration["Configuration:CurrentVersion"] ?? "0.0.1";
             Text = $"SUSFuckr - przyjazny instalator modów {appVersion}";
             Width = 630;
-            Height = 510;
+            Height = 625;
             Icon = new Icon("Graphics/icon.ico");
 
             toolTip = new ToolTip();
@@ -68,6 +125,8 @@ namespace SUSFuckr
 
             // Dodatkowe konfiguracje
             GameLocator.CheckAndSetupVanillaMod(modConfigs, Configuration);
+            UIOutput.Write("Aplikacja uruchomiona poprawnie");
+            Diagnostics.LogModsAndPlugins();
         }
 
 
@@ -124,6 +183,10 @@ namespace SUSFuckr
             loadLocalTxtConfigItem.Click += (s, ev) => ModConfigHandler.LoadLocalTxtConfig();
             touConfigItem.DropDownItems.Add(loadLocalTxtConfigItem);
 
+            ToolStripMenuItem changePresetNamesItem = new ToolStripMenuItem("Zmień nazwy presetów lobby");
+            changePresetNamesItem.Click += (s, ev) => ModConfigHandler.ChangePresetNames();
+            touConfigItem.DropDownItems.Add(changePresetNamesItem);
+
             ToolStripMenuItem lobbySetItem = new ToolStripMenuItem("Ustaw ilość osób w Lobby");
             lobbySetItem.Click += (s, ev) => LobbySet();
             touConfigItem.DropDownItems.Add(lobbySetItem);
@@ -144,6 +207,12 @@ namespace SUSFuckr
             updateApplicationItem.Click += new EventHandler(UpdateApplicationMenuItem_Click);
             updateApplicationItem.MouseHover += (s, ev) => toolTip.Show("Pobiera najnowszą wersję aplikacji", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             additionalActionsMenuItem.DropDownItems.Add(updateApplicationItem);
+
+            ToolStripMenuItem pathSettingsMenuItem = new ToolStripMenuItem("Zmień ścieżkę instalacji modów");
+            pathSettingsMenuItem.Click += new EventHandler(PathSettingsMenuItem_Click);
+            pathSettingsMenuItem.MouseHover += (s, ev) => toolTip.Show("Pozwala zmienić domyślną lokalizację instalacji modów", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
+            additionalActionsMenuItem.DropDownItems.Add(pathSettingsMenuItem);
+
 
             menuStrip.Items.Add(additionalActionsMenuItem);
 
@@ -191,7 +260,15 @@ namespace SUSFuckr
 
 
             this.MainMenuStrip = menuStrip;
-            this.Controls.Add(menuStrip);
+            this.Controls.Add(menuStrip);         
+        }
+
+        private void PathSettingsMenuItem_Click(object sender, EventArgs e)
+        {
+            using (var pathSettingsForm = new PathSettingsForm())
+            {
+                pathSettingsForm.ShowDialog(this);
+            }
         }
 
         private void LobbySet()
@@ -200,12 +277,12 @@ namespace SUSFuckr
             using (Form dialog = new Form())
             {
                 dialog.Text = "Ustaw ilość graczy w Lobby";
-                dialog.Size = new Size(300, 150); // Ustawienie rozmiaru okna
+                dialog.Size = new Size(300, 140); // Ustawienie rozmiaru okna
                 dialog.StartPosition = FormStartPosition.CenterScreen; // Wyśrodkowanie okna na ekranie
 
                 Label label = new Label { Text = "Wpisz liczbę graczy (od 4 do 255):", AutoSize = true, Location = new Point(10, 20) };
-                TextBox textBox = new TextBox { Location = new Point(200, 20), Width = 50 };
-                Button button = new Button { Text = "OK", Location = new Point(120, 60), DialogResult = DialogResult.OK };
+                TextBox textBox = new TextBox { Location = new Point(195, 15), Width = 50 };
+                Button button = new Button { Text = "OK", Location = new Point(100, 60), DialogResult = DialogResult.OK };
 
                 dialog.Controls.Add(label);
                 dialog.Controls.Add(textBox);
@@ -217,9 +294,9 @@ namespace SUSFuckr
                 {
                     if (int.TryParse(textBox.Text, out int numPlayers) && numPlayers >= 4 && numPlayers <= 255)
                     {
-                        // Ścieżka do pliku konfiguracyjnego
-                        string filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                                                        @"Low\Innersloth\Among Us\settings.amogus_TOU");
+
+                        string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+                        string filePath =  Path.Combine(userProfile, @"AppData\LocalLow\Innersloth\Among Us\settings.amogus_TOU");
 
                         if (File.Exists(filePath))
                         {
@@ -330,11 +407,11 @@ namespace SUSFuckr
                         if (File.Exists(dllPath))
                         {
                             File.Delete(dllPath);
-                            Console.WriteLine($"Plik {dllPath} został usunięty.");
+                            UIOutput.Write($"Plik {dllPath} został usunięty.");
                         }
                         else
                         {
-                            Console.WriteLine($"Plik {dllPath} nie istnieje.");
+                            UIOutput.Write($"Plik {dllPath} nie istnieje.");
                         }
                     }
                     catch (Exception ex)
@@ -553,7 +630,14 @@ namespace SUSFuckr
         {
             if (modConfig != null)
             {
-                textBoxPath.Text = modConfig.InstallPath.Replace('/', '\\');
+                if (!string.IsNullOrEmpty(modConfig.InstallPath))
+                {
+                    textBoxPath.Text = modConfig.InstallPath.Replace('/', '\\');
+                }
+                else
+                {
+                    textBoxPath.Text = "";
+                }
                 labelVersion.Text = "Wersja: " + modConfig.AmongVersion;
 
                 if (!string.IsNullOrEmpty(modConfig.InstallPath) && Directory.Exists(modConfig.InstallPath))
@@ -651,6 +735,7 @@ namespace SUSFuckr
                         }
 
                         gameIcon.Click += GameIcon_Click;
+                        gameIcon.MouseUp += GameIcon_MouseUp;
                         this.scrollablePanel.Controls.Add(gameIcon);
 
                         var labelGame = new Label
@@ -675,6 +760,45 @@ namespace SUSFuckr
             }
         }
 
+        private void GameIcon_MouseUp(object? sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                var clickedIcon = sender as PictureBox;
+                if (clickedIcon != null)
+                {
+                    string clickedModName = clickedIcon.Name.Replace("gameIcon_", "");
+                    var clickedModConfig = modConfigs.FirstOrDefault(config => config.ModName == clickedModName);
+
+                    if (clickedModConfig != null &&
+                        !string.IsNullOrEmpty(clickedModConfig.InstallPath) &&
+                        Directory.Exists(clickedModConfig.InstallPath))
+                    {
+                        ContextMenuStrip contextMenu = new ContextMenuStrip();
+
+                        // Opcja "Przejdź do folderu moda"
+                        ToolStripMenuItem openFolderItem = new ToolStripMenuItem("Przejdź do folderu moda");
+                        openFolderItem.Click += (s, args) =>
+                        {
+                            try
+                            {
+                                Process.Start("explorer.exe", clickedModConfig.InstallPath);
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"Nie udało się otworzyć folderu: {ex.Message}",
+                                    "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        };
+                        contextMenu.Items.Add(openFolderItem);
+
+                        // Wyświetl menu kontekstowe w miejscu kliknięcia
+                        contextMenu.Show(clickedIcon, e.Location);
+                    }
+                }
+            }
+        }
+
         private void AddGameIcon(ModConfiguration config)
         {
             try
@@ -690,6 +814,7 @@ namespace SUSFuckr
                 };
                 originalImages[gameIcon] = new Bitmap(gameIcon.Image);
                 gameIcon.Click += GameIcon_Click;
+                gameIcon.MouseUp += GameIcon_MouseUp;
                 this.scrollablePanel.Controls.Add(gameIcon);
 
                 var labelGame = new Label
@@ -796,61 +921,118 @@ namespace SUSFuckr
 
         private async void LaunchButton_Click(object sender, EventArgs e)
         {
-            if (selectedIcon != null)
+            // 1) Walidacja wyboru
+            if (selectedIcon == null)
             {
-                var modConfig = modConfigs.FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
-                if (modConfig != null)
+                MessageBox.Show("Nie wybrano wersji gry do uruchomienia.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            var modConfig = modConfigs
+                .FirstOrDefault(config => $"gameIcon_{config.ModName}" == selectedIcon.Name);
+            if (modConfig == null)
+            {
+                MessageBox.Show("Brak wybranej wersji do uruchomienia.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 2) Włączamy UI „busy”
+            this.UseWaitCursor = true;
+            btnLaunch.Enabled = false;
+            progressBarBusy.Visible = true;
+            statusLabel.Visible = true;
+
+            // 3) Ustalamy tryb uruchomienia
+            string mode = Configuration["Configuration:Mode"] ?? "steam";
+            statusLabel.Text = mode == "epic"
+                ? "Uruchamiam Epic…"
+                : "Uruchamiam Steam…";
+
+            // 4) Czyścimy log w RichTextBox (opcjonalnie)
+            txtLegendaryLog.Clear();
+
+            try
+            {
+                if (mode == "epic")
                 {
-                    string mode = Configuration["Configuration:Mode"] ?? "steam";
-                    if (mode == "epic")
-                    {
-                        var epicManager = new EpicVersionManager();
-                        await epicManager.HandleEpicGameAsync(modConfig);
-                    }
-                    else // Obsługa dla Steam i Vanilla
-                    {
-                        var exePath = Path.Combine(modConfig.InstallPath, "Among Us.exe");
-                        var steamAppIdPath = Path.Combine(modConfig.InstallPath, "steam_appid.txt");
+                    var epicManager = new EpicVersionManager();
 
-                        // Sprawdzenie i utworzenie pliku steam_appid.txt
-                        try
+                    // 4a) Podpinamy event do przekazywania linii do RichTextBox
+                    Action<string> handler = line =>
+                    {
+                        this.Invoke((Action)(() =>
                         {
-                            File.WriteAllText(steamAppIdPath, "945360");
-                            Console.WriteLine("Plik steam_appid.txt utworzony z ID 945360.");
+                            txtLegendaryLog.AppendText(line + Environment.NewLine);
+                            txtLegendaryLog.ScrollToCaret();
+                        }));
+                    };
+                    epicManager.LegendaryOutput += handler;
 
-                            // Próba uruchomienia gry
-                            if (File.Exists(exePath))
-                            {
-                                Process.Start(new ProcessStartInfo("steam://") { UseShellExecute = true });
-                                Process.Start(exePath);
-                            }
-                            else
-                            {
-                                MessageBox.Show("Nie znaleziono pliku Among Us.exe w wybranej ścieżce.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Problem z utworzeniem pliku steam_appid.txt: {ex.Message}. Próba uruchomienia przez Steam URI.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            try
-                            {
-                                Process.Start(new ProcessStartInfo("steam://rungameid/945360") { UseShellExecute = true });
-                            }
-                            catch (Exception uriEx)
-                            {
-                                MessageBox.Show($"Failed to launch game via Steam URI: {uriEx.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
-                        }
-                    }
+                    // 4b) Wywołujemy Epic
+                    await epicManager.HandleEpicGameAsync(modConfig);
+
+                    // 4c) Odpinamy handler
+                    epicManager.LegendaryOutput -= handler;
                 }
                 else
                 {
-                    MessageBox.Show("Brak wybranej wersji do uruchomienia.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // 5) Obsługa Steam / vanilla
+                    string exePath = Path.Combine(modConfig.InstallPath, "Among Us.exe");
+                    string steamAppIdPath = Path.Combine(modConfig.InstallPath, "steam_appid.txt");
+
+                    try
+                    {
+                        File.WriteAllText(steamAppIdPath, "945360");
+
+                        if (File.Exists(exePath))
+                        {
+                            Process.Start(new ProcessStartInfo("steam://") { UseShellExecute = true });
+                            Process.Start(exePath);
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                "Nie znaleziono pliku Among Us.exe w wybranej ścieżce.",
+                                "Błąd",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            $"Problem z utworzeniem pliku steam_appid.txt: {ex.Message}. " +
+                            "Próba uruchomienia przez Steam URI.",
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error);
+
+                        try
+                        {
+                            Process.Start(
+                                new ProcessStartInfo("steam://rungameid/945360")
+                                {
+                                    UseShellExecute = true
+                                });
+                        }
+                        catch (Exception uriEx)
+                        {
+                            MessageBox.Show(
+                                $"Failed to launch game via Steam URI: {uriEx.Message}",
+                                "Error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error);
+                        }
+                    }
                 }
             }
-            else
+            finally
             {
-                MessageBox.Show("Nie wybrano wersji gry do uruchomienia.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                // 6) Wyłączamy UI „busy”
+                this.UseWaitCursor = false;
+                btnLaunch.Enabled = true;
+                progressBarBusy.Visible = false;
+                statusLabel.Visible = false;
             }
         }
 
@@ -1116,6 +1298,8 @@ namespace SUSFuckr
                 gameIcon.Refresh();
             }
         }
+
+
 
     }
 
