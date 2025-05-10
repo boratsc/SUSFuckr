@@ -1,6 +1,6 @@
-# susfuckr
+# SUSFuckr
 
-**susfuckr** to narzędzie do zarządzania modyfikacjami gry *Among Us*, stworzone z myślą o prostocie, przejrzystości i łatwości użycia — nawet dla osób, które nigdy wcześniej nie instalowały modów.
+**SUSFuckr** to narzędzie do zarządzania modyfikacjami gry *Among Us*, stworzone z myślą o prostocie, przejrzystości i łatwości użycia — nawet dla osób, które nigdy wcześniej nie instalowały modów.
 
 Projekt powstał, aby ułatwić instalację, konfigurację oraz uruchamianie modów i dodatków do Among Us, bez potrzeby ręcznego kopiowania plików, szukania odpowiednich wersji czy edytowania ustawień gry.
 
@@ -21,9 +21,9 @@ Głównym celem projektu jest umożliwienie każdemu — niezależnie od poziomu
 
 ---
 
-# susfuckr
+# SUSFuckr
 
-**susfuckr** is a mod management tool for *Among Us*, designed to be simple, transparent, and accessible — even for users with no prior modding experience.
+**SUSFuckr** is a mod management tool for *Among Us*, designed to be simple, transparent, and accessible — even for users with no prior modding experience.
 
 The project was created to streamline the installation, configuration, and launching of *Among Us* mods and add-ons, removing the need for manual file handling, version matching, or game setting tweaks.
 
