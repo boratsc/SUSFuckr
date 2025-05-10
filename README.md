@@ -19,6 +19,9 @@ Projekt aktywnie rozwijany jest we współpracy ze społecznością **[Psychopac
 
 Głównym celem projektu jest umożliwienie każdemu — niezależnie od poziomu zaawansowania technicznego — szybkiego i bezproblemowego uruchomienia modów do *Among Us*. **susfuckr** automatyzuje wszystkie techniczne aspekty procesu: od instalacji, przez weryfikację wersji gry, po konfigurację środowiska — wszystko odbywa się w jednym miejscu, bez potrzeby grzebania w plikach.
 
+![image](https://github.com/user-attachments/assets/f9279f5e-270d-44ec-9ea8-d0352e197048)
+
+
 ---
 
 # SUSFuckr
