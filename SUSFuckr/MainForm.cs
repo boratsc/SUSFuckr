@@ -245,6 +245,41 @@ namespace SUSFuckr
             //additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
             menuStrip.Items.Add(fixBlackScreenItem);
 
+
+            // Dodanie nowego menu "Poradniki wideo"
+            ToolStripMenuItem tutorialsMenuItem = new ToolStripMenuItem("Poradniki wideo");
+
+            // Podpozycja "Instalacja modów"
+            ToolStripMenuItem installModsItem = new ToolStripMenuItem("Instalacja modów");
+            installModsItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://www.youtube.com/watch?v=tuKWlGCaNy4",
+                UseShellExecute = true
+            });
+            tutorialsMenuItem.DropDownItems.Add(installModsItem);
+
+            // Podpozycja "Jak ustawić lobby na więcej niż 15 osób"
+            ToolStripMenuItem lobbySettingsItem = new ToolStripMenuItem("Jak ustawić lobby na więcej niż 15 osób");
+            lobbySettingsItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://www.youtube.com/watch?v=ddK3jZelELY",
+                UseShellExecute = true
+            });
+            tutorialsMenuItem.DropDownItems.Add(lobbySettingsItem);
+
+            // Podpozycja "Pełna instrukcja obsługi SUSFuckr"
+            ToolStripMenuItem fullGuideItem = new ToolStripMenuItem("Pełna instrukcja obsługi SUSFuckr");
+            fullGuideItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://www.youtube.com/watch?v=JqQVVUTMhQk",
+                UseShellExecute = true
+            });
+            tutorialsMenuItem.DropDownItems.Add(fullGuideItem);
+
+            // Dodanie menu "Poradniki wideo" do głównego menu
+            menuStrip.Items.Add(tutorialsMenuItem);
+
+
             ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
             menuStrip.Items.Add(infoMenuItem);
