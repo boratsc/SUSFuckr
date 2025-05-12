@@ -21,7 +21,11 @@ namespace SUSFuckr
 				modDictionary.Add(mod.ModName, mod);
 				AvailableModsListBox.Items.Add(mod.ModName);
 			}
-		}
+            for (int i = 0; i < AvailableModsListBox.Items.Count; i++)
+            {
+                AvailableModsListBox.SetSelected(i, true);
+            }
+        }
 
 		private void btnOk_Click(object sender, EventArgs e)
 		{
