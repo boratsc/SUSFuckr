@@ -805,27 +805,45 @@ namespace SUSFuckr
                     string clickedModName = clickedIcon.Name.Replace("gameIcon_", "");
                     var clickedModConfig = modConfigs.FirstOrDefault(config => config.ModName == clickedModName);
 
-                    if (clickedModConfig != null &&
-                        !string.IsNullOrEmpty(clickedModConfig.InstallPath) &&
-                        Directory.Exists(clickedModConfig.InstallPath))
+                    if (clickedModConfig != null)
                     {
                         ContextMenuStrip contextMenu = new ContextMenuStrip();
 
-                        // Opcja "Przejdź do folderu moda"
-                        ToolStripMenuItem openFolderItem = new ToolStripMenuItem("Przejdź do folderu moda");
-                        openFolderItem.Click += (s, args) =>
+                        // Existing option "Przejdź do folderu moda"
+                        if (!string.IsNullOrEmpty(clickedModConfig.InstallPath) && Directory.Exists(clickedModConfig.InstallPath))
+                        {
+                            ToolStripMenuItem openFolderItem = new ToolStripMenuItem("Przejdź do folderu moda");
+                            openFolderItem.Click += (s, args) =>
+                            {
+                                try
+                                {
+                                    Process.Start("explorer.exe", clickedModConfig.InstallPath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show($"Nie udało się otworzyć folderu: {ex.Message}",
+                                        "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+                            };
+                            contextMenu.Items.Add(openFolderItem);
+                        }
+
+                        // New option "Wyszukaj role i modyfikatory"
+                        ToolStripMenuItem searchRolesItem = new ToolStripMenuItem("Wyszukaj role i modyfikatory");
+                        searchRolesItem.Click += (s, args) =>
                         {
                             try
                             {
-                                Process.Start("explorer.exe", clickedModConfig.InstallPath);
+                                var searchForm = new RoleSearchForm(clickedModConfig.Id, clickedModConfig.ModName);
+                                searchForm.Show();
                             }
                             catch (Exception ex)
                             {
-                                MessageBox.Show($"Nie udało się otworzyć folderu: {ex.Message}",
+                                MessageBox.Show($"Nie udało się otworzyć wyszukiwarki ról: {ex.Message}",
                                     "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
                         };
-                        contextMenu.Items.Add(openFolderItem);
+                        contextMenu.Items.Add(searchRolesItem);
 
                         // Wyświetl menu kontekstowe w miejscu kliknięcia
                         contextMenu.Show(clickedIcon, e.Location);
