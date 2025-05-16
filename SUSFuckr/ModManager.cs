@@ -46,43 +46,64 @@ namespace SUSFuckr
 
         private async Task ModifySteamAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs, ProgressBar progressBar, Label progressLabel)
         {
-            // Specyficzna logika dla Steam
-            string fileName = $"{modConfig.AmongVersion.Replace("-", "").Replace(".", "")}.zip";
-            string fileUrlAmongUs = baseUrl + fileName;
+            // Nowa logika: przechowuj vanilla .zip w Among Us - Vanilla i u¿ywaj go wielokrotnie
             string baseDirectory = PathSettings.ModsInstallPath;
             Directory.CreateDirectory(baseDirectory);
-            string tempFileAmongUs = Path.Combine(baseDirectory, "temp", fileName);
-            Directory.CreateDirectory(Path.GetDirectoryName(tempFileAmongUs)!);
 
-            progressBar.Visible = true; // Poka¿ pasek postêpu dla pobierania pliku gry
-            progressBar.Style = ProgressBarStyle.Continuous;
-            progressLabel.Visible = true;
-            progressLabel.Text = "Plik 1 z 2 - 0% pobierania...";
-            await DownloadFileAsync(fileUrlAmongUs, tempFileAmongUs, progressBar, progressLabel, "1");
+            // 1. Przygotuj œcie¿ki do vanilla
+            string vanillaDir = Path.Combine(baseDirectory, "Among Us - Vanilla");
+            Directory.CreateDirectory(vanillaDir);
 
-            string modFile = Path.Combine(baseDirectory, "temp", "mod.zip");
+            string vanillaZipName = $"{modConfig.AmongVersion.Replace("-", "").Replace(".", "")}.zip";
+            string vanillaZipPath = Path.Combine(vanillaDir, vanillaZipName);
+            string fileUrlAmongUs = baseUrl + vanillaZipName;
+
+            // 2. Pobierz vanilla ZIP jeœli nie istnieje
+            if (!File.Exists(vanillaZipPath))
+            {
+                progressBar.Visible = true;
+                progressBar.Style = ProgressBarStyle.Continuous;
+                progressLabel.Visible = true;
+                progressLabel.Text = "Plik 1 z 2 - 0% pobierania (gra)...";
+                await DownloadFileAsync(fileUrlAmongUs, vanillaZipPath, progressBar, progressLabel, "1");
+            }
+
+            // 3. Pobierz moda
+            string tempDir = Path.Combine(baseDirectory, "temp");
+            Directory.CreateDirectory(tempDir);
+            string modFile = Path.Combine(tempDir, "mod.zip");
             if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
             {
-                progressBar.Visible = true; // Poka¿ pasek postêpu dla pobierania moda
-                progressLabel.Text = "Plik 2 z 2 - 0% pobierania...";
+                progressBar.Visible = true;
+                progressLabel.Text = "Plik 2 z 2 - 0% pobierania (mod)...";
                 await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar, progressLabel, "2");
             }
             else
             {
                 MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return; // lub inna logika obs³ugi b³êdu
+                return;
             }
-            progressBar.Visible = false; // Ukryj pasek postêpu po zakoñczeniu pobierania
+            progressBar.Visible = false;
+
+            // 4. Przygotuj katalog moda
             string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
             if (Directory.Exists(modFolderPath))
             {
                 Directory.Delete(modFolderPath, true);
             }
             Directory.CreateDirectory(modFolderPath);
-            ZipFile.ExtractToDirectory(tempFileAmongUs, modFolderPath);
-            string tempExtractPath = Path.Combine(baseDirectory, "temp", "extractMod");
+
+            // 5. Rozpakuj vanilla ZIP do katalogu moda
+            ZipFile.ExtractToDirectory(vanillaZipPath, modFolderPath);
+
+            // 6. Rozpakuj moda do temp
+            string tempExtractPath = Path.Combine(tempDir, "extractMod");
+            if (Directory.Exists(tempExtractPath))
+                Directory.Delete(tempExtractPath, true);
             Directory.CreateDirectory(tempExtractPath);
             ZipFile.ExtractToDirectory(modFile, tempExtractPath);
+
+            // 7. Skopiuj pliki moda do katalogu moda
             string? sourcePath;
             if (Directory.Exists(Path.Combine(tempExtractPath, "BepInEx")))
             {
@@ -98,9 +119,12 @@ namespace SUSFuckr
                 }
             }
             CopyContent(sourcePath, modFolderPath);
+
+            // 8. Zapisz konfiguracjê i posprz¹taj temp
             modConfig.InstallPath = modFolderPath;
             ConfigManager.SaveConfig(modConfigs);
-            Directory.Delete(Path.Combine(baseDirectory, "temp"), true);
+            Directory.Delete(tempDir, true);
+
             MessageBox.Show($"Instalacja zakoñczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
             GC.Collect();
             GC.WaitForPendingFinalizers();
