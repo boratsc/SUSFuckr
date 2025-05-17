@@ -10,6 +10,13 @@ using System.Text.Json;
 namespace SUSFuckr
 {
     // Klasa modelu przeniesiona do tego samego pliku i przestrzeni nazw
+    public class Ability
+    {
+        public string Name { get; set; }
+        public string Icon { get; set; }
+        public string Description { get; set; }
+    }
+
     public class RoleModifier
     {
         public int Id { get; set; }
@@ -18,6 +25,7 @@ namespace SUSFuckr
         public string Type { get; set; }
         public string Description { get; set; }
         public string ModName { get; set; }
+        public List<Ability> Abilities { get; set; } // DODAJ TO
     }
 
     // Klasa serwisu w tej samej przestrzeni nazw
@@ -438,14 +446,63 @@ namespace SUSFuckr
 
                 // Add category and type
                 descriptionBox.SelectionFont = new Font(descriptionBox.Font.FontFamily, 10, FontStyle.Italic);
-                descriptionBox.AppendText($"Kategoria: {role.Category}\n");
-                descriptionBox.AppendText($"Typ: {role.Type}\n");
-                descriptionBox.AppendText($"Mod: {role.ModName}\n\n");
+                descriptionBox.AppendText($"Kategoria: {role.Category ?? ""}\n");
+                descriptionBox.AppendText($"Typ: {role.Type ?? ""}\n");
+                descriptionBox.AppendText($"Mod: {role.ModName ?? ""}\n\n");
 
                 // Add description
                 descriptionBox.SelectionFont = new Font(descriptionBox.Font.FontFamily, 10, FontStyle.Regular);
-                descriptionBox.AppendText(role.Description.Replace("\\n", "\n").Replace("\\r", "\r"));
+                descriptionBox.AppendText(role.Description?.Replace("\\n", "\n").Replace("\\r", "\r") ?? "");
+
+                // --- DODAJ WYŒWIETLANIE ABILITIES ---
+                if (role.Abilities != null && role.Abilities.Count > 0)
+                {
+                    descriptionBox.AppendText("\n\nZdolnoœci:\n");
+                    foreach (var ability in role.Abilities)
+                    {
+                        try
+                        {
+                            // Ikonka (jeœli jest)
+                            if (!string.IsNullOrEmpty(ability.Icon))
+                            {
+                                using (var wc = new System.Net.WebClient())
+                                {
+                                    byte[] bytes = wc.DownloadData(ability.Icon);
+                                    using (var ms = new System.IO.MemoryStream(bytes))
+                                    {
+                                        using (var img = Image.FromStream(ms))
+                                        {
+                                            // Skalowanie do 24x24 px
+                                            using (var scaled = new Bitmap(img, new Size(24, 24)))
+                                            {
+                                                Clipboard.SetImage(scaled); // workaround na wklejanie obrazka do RichTextBox
+                                                descriptionBox.ReadOnly = false;
+                                                descriptionBox.Paste();
+                                                descriptionBox.ReadOnly = true;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            // Jeœli nie uda siê pobraæ obrazka, pomiñ
+                        }
+
+                        // Nazwa ability
+                        descriptionBox.SelectionFont = new Font(descriptionBox.Font.FontFamily, 10, FontStyle.Bold);
+                        descriptionBox.AppendText($" {ability.Name}\n");
+
+                        // Opis ability
+                        if (!string.IsNullOrWhiteSpace(ability.Description))
+                        {
+                            descriptionBox.SelectionFont = new Font(descriptionBox.Font.FontFamily, 10, FontStyle.Regular);
+                            descriptionBox.AppendText($"{ability.Description.Replace("\\n", "\n").Replace("\\r", "\r")}\n");
+                        }
+                    }
+                }
             }
         }
     }
-}
+}   
