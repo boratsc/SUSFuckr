@@ -8,15 +8,20 @@ using System.Windows.Forms;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 
+
 namespace SUSFuckr
 {
     public class ModManager
     {
         private readonly string baseUrl;
+        private readonly string downloadToken;
+        private readonly string zipPassword;
 
         public ModManager(IConfiguration configuration)
         {
             baseUrl = configuration["Configuration:BaseUrl"] ?? throw new ArgumentNullException(nameof(configuration), "BaseUrl is not configured.");
+            downloadToken = SecretProvider.GetDownloadToken();
+            zipPassword = SecretProvider.Get7zPassword();
         }
 
         public async Task ModifyAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs, ProgressBar progressBar, Label progressLabel, string mode)
@@ -25,6 +30,7 @@ namespace SUSFuckr
             {
                 try
                 {
+                    UIOutput.Write($"[START] Instalacja moda '{modConfig.ModName}' (tryb: {mode})");
                     if (mode == "steam")
                     {
                         await ModifySteamAsync(modConfig, modConfigs, progressBar, progressLabel);
@@ -37,6 +43,7 @@ namespace SUSFuckr
                 }
                 catch (Exception ex)
                 {
+                    UIOutput.Write($"[ERROR] Wystπpi≥ b≥πd podczas instalacji: {ex}");
                     MessageBox.Show($"Wystπpi≥ b≥πd podczas Instalacji: {ex.Message}", "B≥πd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     GC.Collect();
                     GC.WaitForPendingFinalizers();
@@ -46,26 +53,39 @@ namespace SUSFuckr
 
         private async Task ModifySteamAsync(ModConfiguration modConfig, List<ModConfiguration> modConfigs, ProgressBar progressBar, Label progressLabel)
         {
-            // Nowa logika: przechowuj vanilla .zip w Among Us - Vanilla i uøywaj go wielokrotnie
             string baseDirectory = PathSettings.ModsInstallPath;
             Directory.CreateDirectory(baseDirectory);
 
-            // 1. Przygotuj úcieøki do vanilla
             string vanillaDir = Path.Combine(baseDirectory, "Among Us - Vanilla");
             Directory.CreateDirectory(vanillaDir);
 
-            string vanillaZipName = $"{modConfig.AmongVersion.Replace("-", "").Replace(".", "")}.zip";
-            string vanillaZipPath = Path.Combine(vanillaDir, vanillaZipName);
-            string fileUrlAmongUs = baseUrl + vanillaZipName;
+            // Nazwa pliku nie jest juø kodowana w base64, uøywamy jej bezpoúrednio
+            string vanilla7zName = $"{modConfig.AmongVersion.Replace("-", "").Replace(".", "")}";
+            string vanilla7zPath = Path.Combine(vanillaDir, vanilla7zName + ".7z");
+            string fileUrlAmongUs = $"{baseUrl}api/susfuckr-download-version?version={vanilla7zName}";
 
-            // 2. Pobierz vanilla ZIP jeúli nie istnieje
-            if (!File.Exists(vanillaZipPath))
+            // 2. Pobierz vanilla 7z jeúli nie istnieje
+            if (!File.Exists(vanilla7zPath))
             {
+                UIOutput.Write($"[INFO] Pobieram vanilla: {fileUrlAmongUs}");
                 progressBar.Visible = true;
                 progressBar.Style = ProgressBarStyle.Continuous;
                 progressLabel.Visible = true;
                 progressLabel.Text = "Plik 1 z 2 - 0% pobierania (gra)...";
-                await DownloadFileAsync(fileUrlAmongUs, vanillaZipPath, progressBar, progressLabel, "1");
+                await DownloadFileAsync(fileUrlAmongUs, vanilla7zPath, progressBar, progressLabel, "1");
+                UIOutput.Write($"[INFO] Pobrano vanilla do: {vanilla7zPath}");
+            }
+            else
+            {
+                UIOutput.Write($"[INFO] Plik vanilla juø istnieje: {vanilla7zPath}");
+            }
+
+            // Sprawdü rozmiar pliku
+            if (!File.Exists(vanilla7zPath) || new FileInfo(vanilla7zPath).Length < 1000)
+            {
+                UIOutput.Write($"[ERROR] Pobrany plik vanilla jest nieprawid≥owy lub pusty. Sprawdü token i wersjÍ.");
+                MessageBox.Show("Pobrany plik vanilla jest nieprawid≥owy lub pusty. Sprawdü token i wersjÍ.", "B≥πd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
             }
 
             // 3. Pobierz moda
@@ -74,12 +94,15 @@ namespace SUSFuckr
             string modFile = Path.Combine(tempDir, "mod.zip");
             if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
             {
+                UIOutput.Write($"[INFO] Pobieram moda: {modConfig.GitHubRepoOrLink}");
                 progressBar.Visible = true;
                 progressLabel.Text = "Plik 2 z 2 - 0% pobierania (mod)...";
                 await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar, progressLabel, "2");
+                UIOutput.Write($"[INFO] Pobrano moda do: {modFile}");
             }
             else
             {
+                UIOutput.Write($"[ERROR] Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.");
                 MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.", "B≥πd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
@@ -89,19 +112,43 @@ namespace SUSFuckr
             string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
             if (Directory.Exists(modFolderPath))
             {
+                UIOutput.Write($"[INFO] Usuwam istniejπcy katalog moda: {modFolderPath}");
                 Directory.Delete(modFolderPath, true);
             }
             Directory.CreateDirectory(modFolderPath);
 
-            // 5. Rozpakuj vanilla ZIP do katalogu moda
-            ZipFile.ExtractToDirectory(vanillaZipPath, modFolderPath);
+            // 5. Rozpakuj vanilla 7z do katalogu moda
+            try
+            {
+                UIOutput.Write($"[INFO] RozpakowujÍ vanilla 7z: {vanilla7zPath} do {modFolderPath}");
+                Extract7zWithPassword(vanilla7zPath, modFolderPath, zipPassword);
+                UIOutput.Write($"[INFO] Rozpakowano vanilla.");
+            }
+            catch (Exception ex)
+            {
+                UIOutput.Write($"[ERROR] B≥πd podczas rozpakowywania archiwum: {ex}");
+                MessageBox.Show($"B≥πd podczas rozpakowywania archiwum: {ex.Message}", "B≥πd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             // 6. Rozpakuj moda do temp
             string tempExtractPath = Path.Combine(tempDir, "extractMod");
             if (Directory.Exists(tempExtractPath))
                 Directory.Delete(tempExtractPath, true);
             Directory.CreateDirectory(tempExtractPath);
-            ZipFile.ExtractToDirectory(modFile, tempExtractPath);
+
+            try
+            {
+                UIOutput.Write($"[INFO] RozpakowujÍ archiwum moda: {modFile} do {tempExtractPath}");
+                ZipFile.ExtractToDirectory(modFile, tempExtractPath);
+                UIOutput.Write($"[INFO] Rozpakowano archiwum moda.");
+            }
+            catch (Exception ex)
+            {
+                UIOutput.Write($"[ERROR] B≥πd podczas rozpakowywania archiwum moda: {ex}");
+                MessageBox.Show($"B≥πd podczas rozpakowywania archiwum moda: {ex.Message}", "B≥πd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             // 7. Skopiuj pliki moda do katalogu moda
             string? sourcePath;
@@ -114,10 +161,12 @@ namespace SUSFuckr
                 sourcePath = Directory.GetDirectories(tempExtractPath).FirstOrDefault();
                 if (sourcePath == null)
                 {
+                    UIOutput.Write($"[ERROR] Nie znaleziono plikÛw do skopiowania.");
                     MessageBox.Show("Nie znaleziono plikÛw do skopiowania.", "B≥πd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
             }
+            UIOutput.Write($"[INFO] KopiujÍ pliki moda z {sourcePath} do {modFolderPath}");
             CopyContent(sourcePath, modFolderPath);
 
             // 8. Zapisz konfiguracjÍ i posprzπtaj temp
@@ -125,6 +174,7 @@ namespace SUSFuckr
             ConfigManager.SaveConfig(modConfigs);
             Directory.Delete(tempDir, true);
 
+            UIOutput.Write($"[SUCCESS] Instalacja zakoÒczona sukcesem dla moda: {modConfig.ModName}");
             MessageBox.Show($"Instalacja zakoÒczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
             GC.Collect();
             GC.WaitForPendingFinalizers();
@@ -170,38 +220,144 @@ namespace SUSFuckr
                 string tempDllFile = Path.Combine(baseDirectory, "temp", fileName);
                 Directory.CreateDirectory(Path.GetDirectoryName(tempDllFile)!);
 
-                // Pobierz plik DLL
-                progressBar.Visible = true; // Pokaø pasek postÍpu na poczπtku pobierania
+                UIOutput.Write($"[INFO] Pobieram DLL: {dllUrl}");
+                progressBar.Visible = true;
                 progressBar.Style = ProgressBarStyle.Continuous;
                 progressLabel.Text = "Pobieranie DLL - 0% pobierania...";
                 await DownloadFileAsync(dllUrl, tempDllFile, progressBar, progressLabel, "2");
-                progressBar.Visible = false; // Ukryj pasek postÍpu po zakoÒczeniu pobierania
+                progressBar.Visible = false;
+                UIOutput.Write($"[INFO] Pobrano DLL do: {tempDllFile}");
 
                 foreach (var fullMod in installedFullMods)
                 {
                     string targetDir = Path.Combine(fullMod.InstallPath, modConfig.DllInstallPath ?? string.Empty);
                     Directory.CreateDirectory(targetDir);
-                    string targetFile = Path.Combine(targetDir, fileName);  // Zachowaj nazwÍ pliku
+                    string targetFile = Path.Combine(targetDir, fileName);
                     File.Copy(tempDllFile, targetFile, true);
+                    UIOutput.Write($"[INFO] Skopiowano DLL do: {targetFile}");
                 }
 
                 Directory.Delete(Path.Combine(baseDirectory, "temp"), true);
+                UIOutput.Write($"[SUCCESS] Instalacja DLL zakoÒczona sukcesem dla moda: {modConfig.ModName}");
                 MessageBox.Show($"Instalacja DLL zakoÒczona sukcesem dla moda: {modConfig.ModName}", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
+                UIOutput.Write($"[ERROR] Wystπpi≥ b≥πd podczas instalacji DLL: {ex}");
                 MessageBox.Show($"Wystπpi≥ b≥πd podczas instalacji DLL: {ex.Message}", "B≥πd", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
+        private void Extract7zWithPassword(string archivePath, string extractPath, string password)
+        {
+            try
+            {
+                UIOutput.Write($"[INFO] RozpakowujÍ archiwum 7z: {archivePath} do {extractPath} (z has≥em)");
+
+                // åcieøka do 7z.exe w podkatalogu
+                string sevenZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "7z.exe");
+
+                // Upewnij siÍ øe katalog docelowy istnieje
+                Directory.CreateDirectory(extractPath);
+
+                // Sprawdü czy plik istnieje
+                if (!File.Exists(sevenZipPath))
+                {
+                    UIOutput.Write($"[ERROR] Nie znaleziono 7z.exe w katalogu: {Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools")}");
+                    throw new FileNotFoundException($"Nie znaleziono 7z.exe: {sevenZipPath}");
+                }
+
+                // Uøyj procesu 7z.exe do wypakowania
+                using (var process = new System.Diagnostics.Process())
+                {
+                    process.StartInfo.FileName = sevenZipPath;
+                    process.StartInfo.Arguments = $"x \"{archivePath}\" -o\"{extractPath}\" -p{password} -y";
+                    process.StartInfo.UseShellExecute = false;
+                    process.StartInfo.CreateNoWindow = true;
+                    process.StartInfo.RedirectStandardOutput = true;
+                    process.StartInfo.RedirectStandardError = true;
+
+                    // Nie wyúwietlaj has≥a w logach! Pokaø tylko ogÛlnπ informacjÍ
+                    UIOutput.Write($"[INFO] Uruchamiam 7z.exe do rozpakowania: {archivePath}");
+                    process.Start();
+
+                    string output = process.StandardOutput.ReadToEnd();
+                    string error = process.StandardError.ReadToEnd();
+
+                    process.WaitForExit();
+
+                    if (process.ExitCode != 0)
+                    {
+                        throw new Exception($"B≥πd podczas rozpakowywania archiwum. Kod wyjúcia: {process.ExitCode}. B≥πd: {error}");
+                    }
+
+                    UIOutput.Write($"[INFO] Archiwum rozpakowane pomyúlnie.");
+                }
+            }
+            catch (Exception ex)
+            {
+                // Upewnij siÍ, øe has≥o nie pojawia siÍ w komunikacie b≥Ídu
+                string safeErrorMessage = ex.Message.Replace(password, "***HIDDEN***");
+                UIOutput.Write($"[ERROR] B≥πd podczas rozpakowywania archiwum: {safeErrorMessage}");
+                throw new Exception(safeErrorMessage, ex.InnerException);
+            }
+        }
+
+
+
+        // Metoda pomocnicza uøywajπca oryginalnej biblioteki SevenZipExtractor
+        private void ExtractWithSevenZipExtractor(string archivePath, string extractPath, string password)
+        {
+            UIOutput.Write("[INFO] PrÛba uøycia biblioteki SevenZipExtractor");
+            string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "7z.dll");
+
+            if (!File.Exists(dllPath))
+            {
+                throw new FileNotFoundException($"Nie znaleziono biblioteki 7z.dll w katalogu: {dllPath}");
+            }
+
+            // Nie wyúwietlaj has≥a w logach!
+            UIOutput.Write($"[INFO] PrÛba rozpakowania archiwum przy uøyciu cmd.exe i 7z.exe");
+
+            var startInfo = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = "cmd.exe",
+                Arguments = $"/c \"7z.exe\" x \"{archivePath}\" -o\"{extractPath}\" -p{password} -y",
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            using (var process = System.Diagnostics.Process.Start(startInfo))
+            {
+                process.WaitForExit();
+                if (process.ExitCode != 0)
+                {
+                    throw new Exception($"Nie uda≥o siÍ rozpakowaÊ archiwum. Kod b≥Ídu: {process.ExitCode}");
+                }
+            }
+        }
+
+
+
+
         private async Task DownloadFileAsync(string url, string targetPath, ProgressBar progressBar, Label progressLabel, string fileNumber)
         {
+            UIOutput.Write($"[INFO] Rozpoczynam pobieranie pliku {fileNumber} do: {Path.GetFileName(targetPath)}");
             using (var client = new HttpClient())
             {
                 client.Timeout = TimeSpan.FromMinutes(5);
+                client.DefaultRequestHeaders.Add("Authorization", downloadToken);
                 using (HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                 {
-                    response.EnsureSuccessStatusCode();
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        string errorContent = await response.Content.ReadAsStringAsync();
+                        UIOutput.Write($"[ERROR] B≥πd pobierania pliku: {response.StatusCode}\n{errorContent}");
+                        MessageBox.Show($"B≥πd pobierania pliku: {response.StatusCode}\n{errorContent}", "B≥πd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return;
+                    }
                     var totalBytes = response.Content.Headers.ContentLength ?? 1;
                     using (var stream = await response.Content.ReadAsStreamAsync())
                     {
@@ -225,6 +381,7 @@ namespace SUSFuckr
                     }
                 }
             }
+            UIOutput.Write($"[INFO] ZakoÒczono pobieranie: {targetPath}");
         }
     }
 }
