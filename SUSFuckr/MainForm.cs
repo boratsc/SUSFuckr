@@ -502,6 +502,8 @@ namespace SUSFuckr
                 var tempFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.temp.json");
                 using (HttpClient client = new HttpClient())
                 {
+                    string downloadToken = SecretProvider.GetDownloadToken();
+                    client.DefaultRequestHeaders.Add("Authorization", downloadToken);
                     HttpResponseMessage response = await client.GetAsync(Configuration["Configuration:UpdateServerUrl"]);
                     response.EnsureSuccessStatusCode();
                     using (FileStream fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))

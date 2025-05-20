@@ -72,13 +72,40 @@ namespace SUSFuckr
                 progressBar.Style = ProgressBarStyle.Continuous;
                 progressLabel.Visible = true;
                 progressLabel.Text = "Plik 1 z 2 - 0% pobierania (gra)...";
-                await DownloadFileAsync(fileUrlAmongUs, vanilla7zPath, progressBar, progressLabel, "1");
+
+                bool downloaded = false;
+                do
+                {
+                    downloaded = await DownloadFileWithMd5CheckAsync(fileUrlAmongUs, vanilla7zPath, progressBar, progressLabel, "1");
+                    if (!downloaded)
+                    {
+                        var retry = MessageBox.Show(
+                            "Wyst¹pi³ b³¹d podczas pobierania pliku vanilla lub suma kontrolna jest nieprawid³owa. Czy chcesz spróbowaæ ponownie?",
+                            "B³¹d pobierania",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (retry == DialogResult.Yes)
+                        {
+                            if (File.Exists(vanilla7zPath))
+                                File.Delete(vanilla7zPath);
+                        }
+                        else
+                        {
+                            if (File.Exists(vanilla7zPath))
+                                File.Delete(vanilla7zPath);
+                            return;
+                        }
+                    }
+                } while (!downloaded);
+
                 UIOutput.Write($"[INFO] Pobrano vanilla do: {vanilla7zPath}");
             }
             else
             {
                 UIOutput.Write($"[INFO] Plik vanilla ju¿ istnieje: {vanilla7zPath}");
             }
+
 
             // SprawdŸ rozmiar pliku
             if (!File.Exists(vanilla7zPath) || new FileInfo(vanilla7zPath).Length < 1000)
@@ -340,6 +367,77 @@ namespace SUSFuckr
         }
 
 
+        private async Task<bool> DownloadFileWithMd5CheckAsync(
+    string url,
+    string targetPath,
+    ProgressBar progressBar,
+    Label progressLabel,
+    string fileNumber)
+        {
+            UIOutput.Write($"[INFO] Rozpoczynam pobieranie pliku {fileNumber} do: {Path.GetFileName(targetPath)}");
+            using (var client = new HttpClient())
+            {
+                client.Timeout = TimeSpan.FromMinutes(10);
+                client.DefaultRequestHeaders.Add("Authorization", downloadToken);
+
+                using (HttpResponseMessage response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        string errorContent = await response.Content.ReadAsStringAsync();
+                        UIOutput.Write($"[ERROR] B³¹d pobierania pliku: {response.StatusCode}\n{errorContent}");
+                        MessageBox.Show($"B³¹d pobierania pliku: {response.StatusCode}\n{errorContent}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        return false;
+                    }
+
+                    // Pobierz sumê MD5 z nag³ówka
+                    string? md5FromHeader = null;
+                    if (response.Headers.TryGetValues("X-File-MD5", out var values))
+                        md5FromHeader = values.FirstOrDefault();
+
+                    var totalBytes = response.Content.Headers.ContentLength ?? 1;
+                    using (var stream = await response.Content.ReadAsStreamAsync())
+                    using (var fileStream = new FileStream(targetPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    {
+                        var buffer = new byte[81920];
+                        long totalRead = 0L;
+                        int bytesRead;
+                        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
+                        {
+                            await fileStream.WriteAsync(buffer, 0, bytesRead);
+                            totalRead += bytesRead;
+                            var percentDone = (int)((totalRead * 100) / totalBytes);
+                            progressBar.Invoke(new Action(() =>
+                            {
+                                progressBar.Value = percentDone;
+                                progressLabel.Text = $"Plik {fileNumber} z 2 - {percentDone}% pobierania";
+                            }));
+                        }
+                    }
+
+                    // SprawdŸ sumê kontroln¹
+                    if (!string.IsNullOrEmpty(md5FromHeader))
+                    {
+                        string localMd5 = CalculateMD5(targetPath);
+                        if (!string.Equals(localMd5, md5FromHeader, StringComparison.OrdinalIgnoreCase))
+                        {
+                            var result = MessageBox.Show(
+                                $"Suma kontrolna pliku nie zgadza siê z t¹ na serwerze!\nOczekiwana: {md5FromHeader}\nLokalna: {localMd5}\n\nCzy mimo to chcesz spróbowaæ rozpakowaæ plik? (NIE zalecane!)",
+                                "B³¹d sumy kontrolnej",
+                                MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                            if (result == DialogResult.No)
+                            {
+                                File.Delete(targetPath);
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            UIOutput.Write($"[INFO] Zakoñczono pobieranie: {targetPath}");
+            return true;
+        }
 
 
         private async Task DownloadFileAsync(string url, string targetPath, ProgressBar progressBar, Label progressLabel, string fileNumber)
@@ -383,5 +481,15 @@ namespace SUSFuckr
             }
             UIOutput.Write($"[INFO] Zakoñczono pobieranie: {targetPath}");
         }
+
+        private string CalculateMD5(string filePath)
+        {
+            using (var md5 = System.Security.Cryptography.MD5.Create())
+            using (var stream = File.OpenRead(filePath))
+            {
+                var hash = md5.ComputeHash(stream);
+                return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+            }
+        }
     }
-}
+ }
