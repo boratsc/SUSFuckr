@@ -290,7 +290,7 @@ namespace SUSFuckr
                 FileName = "https://liberapay.com/boracik/donate",
                 UseShellExecute = true
             });
-            supportMenuItem.MouseHover += (s, ev) => toolTip.Show("Zbieram hajs, żeby Windows się nie pluł, że aplikacja jest niebezpieczna!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
+            supportMenuItem.MouseHover += (s, ev) => toolTip.Show("Na utrzymanie i rozwój kolejnych projektów!", menuStrip, MousePosition.X - this.Location.X, MousePosition.Y - this.Location.Y, 2000);
             menuStrip.Items.Add(supportMenuItem);
 
 
@@ -811,9 +811,10 @@ namespace SUSFuckr
                     {
                         ContextMenuStrip contextMenu = new ContextMenuStrip();
 
-                        // Existing option "Przejdź do folderu moda"
+
                         if (!string.IsNullOrEmpty(clickedModConfig.InstallPath) && Directory.Exists(clickedModConfig.InstallPath))
                         {
+                            // Przejdź do folderu moda
                             ToolStripMenuItem openFolderItem = new ToolStripMenuItem("Przejdź do folderu moda");
                             openFolderItem.Click += (s, args) =>
                             {
@@ -828,6 +829,41 @@ namespace SUSFuckr
                                 }
                             };
                             contextMenu.Items.Add(openFolderItem);
+
+                            // Utwórz skrót na pulpicie
+                            ToolStripMenuItem createShortcutItem = new ToolStripMenuItem("Utwórz skrót na pulpicie");
+                            createShortcutItem.Click += (s, args) =>
+                            {
+                                try
+                                {
+                                    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory);
+                                    string shortcutPath = Path.Combine(desktopPath, $"Among Us - {clickedModConfig.ModName}.lnk");
+                                    string targetPath = Path.Combine(clickedModConfig.InstallPath, "Among Us.exe");
+
+                                    if (!File.Exists(targetPath))
+                                    {
+                                        MessageBox.Show("Nie znaleziono pliku Among Us.exe w folderze moda.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                        return;
+                                    }
+
+                                    // Tworzenie skrótu przez Windows Script Host
+                                    Type shellType = Type.GetTypeFromProgID("WScript.Shell");
+                                    dynamic shell = Activator.CreateInstance(shellType);
+                                    var shortcut = shell.CreateShortcut(shortcutPath);
+                                    shortcut.TargetPath = targetPath;
+                                    shortcut.WorkingDirectory = clickedModConfig.InstallPath;
+                                    shortcut.WindowStyle = 1;
+                                    shortcut.Description = $"Among Us - ({clickedModConfig.ModName})";
+                                    shortcut.Save();
+
+                                    MessageBox.Show("Skrót został utworzony na pulpicie.", "Sukces", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show($"Nie udało się utworzyć skrótu: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+                            };
+                            contextMenu.Items.Add(createShortcutItem);
                         }
 
                         // New option "Wyszukaj role i modyfikatory"
