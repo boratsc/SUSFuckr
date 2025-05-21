@@ -138,6 +138,8 @@ namespace SUSFuckr
                 var handler = new HttpClientHandler();
                 handler.ServerCertificateCustomValidationCallback = (message, certificate, chain, sslPolicyErrors) => true;
                 using var client = new HttpClient(handler);
+                string downloadToken = SecretProvider.GetDownloadToken();
+                client.DefaultRequestHeaders.Add("Authorization", downloadToken);
                 using var content = new MultipartFormDataContent();
                 using var fs = File.OpenRead(tempFilePath);
                 content.Add(new StreamContent(fs), "file", Path.GetFileName(tempFilePath));
@@ -257,6 +259,8 @@ namespace SUSFuckr
                 var handler = new HttpClientHandler();
                 handler.ServerCertificateCustomValidationCallback = (message, certificate, chain, sslPolicyErrors) => true;
                 using var client = new HttpClient(handler);
+                string downloadToken = SecretProvider.GetDownloadToken();
+                client.DefaultRequestHeaders.Add("Authorization", downloadToken);
                 var response = await client.GetAsync(serverUrl);
                 if (response.IsSuccessStatusCode)
                 {

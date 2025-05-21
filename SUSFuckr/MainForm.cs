@@ -245,6 +245,41 @@ namespace SUSFuckr
             //additionalActionsMenuItem.DropDownItems.Add(fixBlackScreenItem);
             menuStrip.Items.Add(fixBlackScreenItem);
 
+
+            // Dodanie nowego menu "Poradniki wideo"
+            ToolStripMenuItem tutorialsMenuItem = new ToolStripMenuItem("Poradniki wideo");
+
+            // Podpozycja "Instalacja modów"
+            ToolStripMenuItem installModsItem = new ToolStripMenuItem("Instalacja modów");
+            installModsItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://www.youtube.com/watch?v=tuKWlGCaNy4",
+                UseShellExecute = true
+            });
+            tutorialsMenuItem.DropDownItems.Add(installModsItem);
+
+            // Podpozycja "Jak ustawić lobby na więcej niż 15 osób"
+            ToolStripMenuItem lobbySettingsItem = new ToolStripMenuItem("Jak ustawić lobby na więcej niż 15 osób");
+            lobbySettingsItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://www.youtube.com/watch?v=ddK3jZelELY",
+                UseShellExecute = true
+            });
+            tutorialsMenuItem.DropDownItems.Add(lobbySettingsItem);
+
+            // Podpozycja "Pełna instrukcja obsługi SUSFuckr"
+            ToolStripMenuItem fullGuideItem = new ToolStripMenuItem("Pełna instrukcja obsługi SUSFuckr");
+            fullGuideItem.Click += (s, ev) => Process.Start(new ProcessStartInfo
+            {
+                FileName = "https://www.youtube.com/watch?v=JqQVVUTMhQk",
+                UseShellExecute = true
+            });
+            tutorialsMenuItem.DropDownItems.Add(fullGuideItem);
+
+            // Dodanie menu "Poradniki wideo" do głównego menu
+            menuStrip.Items.Add(tutorialsMenuItem);
+
+
             ToolStripMenuItem infoMenuItem = new ToolStripMenuItem("Informacje");
             infoMenuItem.Click += new EventHandler(InfoMenuItem_Click);
             menuStrip.Items.Add(infoMenuItem);
@@ -467,6 +502,8 @@ namespace SUSFuckr
                 var tempFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.temp.json");
                 using (HttpClient client = new HttpClient())
                 {
+                    string downloadToken = SecretProvider.GetDownloadToken();
+                    client.DefaultRequestHeaders.Add("Authorization", downloadToken);
                     HttpResponseMessage response = await client.GetAsync(Configuration["Configuration:UpdateServerUrl"]);
                     response.EnsureSuccessStatusCode();
                     using (FileStream fs = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write))
@@ -770,27 +807,45 @@ namespace SUSFuckr
                     string clickedModName = clickedIcon.Name.Replace("gameIcon_", "");
                     var clickedModConfig = modConfigs.FirstOrDefault(config => config.ModName == clickedModName);
 
-                    if (clickedModConfig != null &&
-                        !string.IsNullOrEmpty(clickedModConfig.InstallPath) &&
-                        Directory.Exists(clickedModConfig.InstallPath))
+                    if (clickedModConfig != null)
                     {
                         ContextMenuStrip contextMenu = new ContextMenuStrip();
 
-                        // Opcja "Przejdź do folderu moda"
-                        ToolStripMenuItem openFolderItem = new ToolStripMenuItem("Przejdź do folderu moda");
-                        openFolderItem.Click += (s, args) =>
+                        // Existing option "Przejdź do folderu moda"
+                        if (!string.IsNullOrEmpty(clickedModConfig.InstallPath) && Directory.Exists(clickedModConfig.InstallPath))
+                        {
+                            ToolStripMenuItem openFolderItem = new ToolStripMenuItem("Przejdź do folderu moda");
+                            openFolderItem.Click += (s, args) =>
+                            {
+                                try
+                                {
+                                    Process.Start("explorer.exe", clickedModConfig.InstallPath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show($"Nie udało się otworzyć folderu: {ex.Message}",
+                                        "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                }
+                            };
+                            contextMenu.Items.Add(openFolderItem);
+                        }
+
+                        // New option "Wyszukaj role i modyfikatory"
+                        ToolStripMenuItem searchRolesItem = new ToolStripMenuItem("Wyszukaj role i modyfikatory");
+                        searchRolesItem.Click += (s, args) =>
                         {
                             try
                             {
-                                Process.Start("explorer.exe", clickedModConfig.InstallPath);
+                                var searchForm = new RoleSearchForm(clickedModConfig.Id, clickedModConfig.ModName);
+                                searchForm.Show();
                             }
                             catch (Exception ex)
                             {
-                                MessageBox.Show($"Nie udało się otworzyć folderu: {ex.Message}",
+                                MessageBox.Show($"Nie udało się otworzyć wyszukiwarki ról: {ex.Message}",
                                     "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                             }
                         };
-                        contextMenu.Items.Add(openFolderItem);
+                        contextMenu.Items.Add(searchRolesItem);
 
                         // Wyświetl menu kontekstowe w miejscu kliknięcia
                         contextMenu.Show(clickedIcon, e.Location);

@@ -1,0 +1,2 @@
+dotnet publish -r win-x64 -c Release -o ./publish
+skopiowaæ katalog Graphics / updater / tools
