@@ -24,13 +24,15 @@ namespace SUSFuckr
 
         public EpicVersionManager()
         {
+            string exeDir = Path.GetDirectoryName(Environment.ProcessPath)!;
+
             legendaryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.exe");
             manifestDirectory = AppDomain.CurrentDomain.BaseDirectory;
             installDirectory = PathSettings.ModsInstallPath;
-            appSettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json"); 
+            appSettingsFilePath = Path.Combine(exeDir, "appsettings.json");
 
             logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "epic.log.txt");
-            legendaryLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.log.txt");
+            legendaryLogFilePath = Path.Combine(exeDir, "legendary.log.txt");
         }
 
         private void LogToFile(string message)

@@ -24,12 +24,9 @@ namespace SUSFuckr
 
     public static class ConfigManager
     {
-        private static readonly string configFilePath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "config.json");
-        private static readonly string appSettingsFilePath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "appsettings.json");
+        private static readonly string exeDir = Path.GetDirectoryName(Environment.ProcessPath)!;
+        private static readonly string configFilePath = Path.Combine(exeDir, "config.json");
+        private static readonly string appSettingsFilePath = Path.Combine(exeDir, "appsettings.json");
         private static readonly string configApiUrl = "https://susfuckr.boracik.pl/api/config";
 
         public static List<ModConfiguration> LoadConfig()

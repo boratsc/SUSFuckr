@@ -8,9 +8,11 @@ namespace SUSFuckr
 	{
 		private static string _modsInstallPath = string.Empty;
 		private static readonly string _defaultModsPath;
-		private static readonly string _configFilePath = "appsettings.json";
+        private static readonly string _configFilePath = Path.Combine(
+			Path.GetDirectoryName(Environment.ProcessPath)!,
+			"appsettings.json");
 
-		static PathSettings()
+        static PathSettings()
 		{
 			var config = new ConfigurationBuilder()
 				.AddJsonFile(_configFilePath, optional: true, reloadOnChange: true)

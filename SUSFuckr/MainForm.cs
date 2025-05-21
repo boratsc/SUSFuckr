@@ -63,9 +63,12 @@ namespace SUSFuckr
             };
 
             // Konfiguracja aplikacji
+            string exeDirectory = Path.GetDirectoryName(Environment.ProcessPath)!;
+
             var builder = new ConfigurationBuilder()
-                .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                .SetBasePath(exeDirectory)
                 .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true);
+
             Configuration = builder.Build();
 
             // --- dodaj statusStrip + statusLabel ---
