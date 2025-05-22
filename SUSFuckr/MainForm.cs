@@ -1139,6 +1139,7 @@ namespace SUSFuckr
                 {
                     string mode = Configuration["Configuration:Mode"] ?? "steam"; // Default to steam
                     bool modificationSuccess = false;
+                    btnModify.Enabled = false;
                     progressBar.Visible = true;
                     progressBar.Style = ProgressBarStyle.Continuous;
                     progressLabel.Visible = true;
@@ -1146,9 +1147,22 @@ namespace SUSFuckr
                     {
                         if (mode == "steam")
                         {
-                            ModManager manager = new ModManager(Configuration);
-                            await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel, mode);
-                            modificationSuccess = true;
+                            progressBarBusy.Visible = true;
+                            statusLabel.Visible = true;
+                            statusLabel.Text = "Instalacja moda...";
+
+                            try
+                            {
+                                ModManager manager = new ModManager(Configuration);
+                                await manager.ModifyAsync(modConfig, modConfigs, progressBar, progressLabel, mode);
+                                modificationSuccess = true;
+                            }
+                            finally
+                            {
+                                progressBarBusy.Visible = false;
+                                statusLabel.Visible = false;
+                                btnModify.Enabled = true;
+                            }
                         }
                         else if (mode == "epic")
                         {

@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
-
+using System.Diagnostics;
 
 namespace SUSFuckr
 {
@@ -148,7 +148,8 @@ namespace SUSFuckr
             try
             {
                 UIOutput.Write($"[INFO] Rozpakowujê vanilla 7z: {vanilla7zPath} do {modFolderPath}");
-                Extract7zWithPassword(vanilla7zPath, modFolderPath, zipPassword);
+                await Task.Run(() => Extract7zWithPassword(vanilla7zPath, modFolderPath, zipPassword));
+
                 UIOutput.Write($"[INFO] Rozpakowano vanilla.");
             }
             catch (Exception ex)
@@ -281,20 +282,18 @@ namespace SUSFuckr
             {
                 UIOutput.Write($"[INFO] Rozpakowujê archiwum 7z: {archivePath} do {extractPath} (z has³em)");
 
-                // Œcie¿ka do 7z.exe w podkatalogu
-                string sevenZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "7z.exe");
+                // Œcie¿ka do 7z.exe w katalogu aplikacji
+                string appDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)!;
+                string sevenZipPath = Path.Combine(appDir, "tools", "7z.exe");
 
-                // Upewnij siê ¿e katalog docelowy istnieje
                 Directory.CreateDirectory(extractPath);
 
-                // SprawdŸ czy plik istnieje
                 if (!File.Exists(sevenZipPath))
                 {
-                    UIOutput.Write($"[ERROR] Nie znaleziono 7z.exe w katalogu: {Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools")}");
+                    UIOutput.Write($"[ERROR] Nie znaleziono 7z.exe w katalogu: {Path.Combine(appDir, "tools")}");
                     throw new FileNotFoundException($"Nie znaleziono 7z.exe: {sevenZipPath}");
                 }
 
-                // U¿yj procesu 7z.exe do wypakowania
                 using (var process = new System.Diagnostics.Process())
                 {
                     process.StartInfo.FileName = sevenZipPath;
@@ -304,7 +303,6 @@ namespace SUSFuckr
                     process.StartInfo.RedirectStandardOutput = true;
                     process.StartInfo.RedirectStandardError = true;
 
-                    // Nie wyœwietlaj has³a w logach! Poka¿ tylko ogóln¹ informacjê
                     UIOutput.Write($"[INFO] Uruchamiam 7z.exe do rozpakowania: {archivePath}");
                     process.Start();
 
@@ -323,12 +321,12 @@ namespace SUSFuckr
             }
             catch (Exception ex)
             {
-                // Upewnij siê, ¿e has³o nie pojawia siê w komunikacie b³êdu
                 string safeErrorMessage = ex.Message.Replace(password, "***HIDDEN***");
                 UIOutput.Write($"[ERROR] B³¹d podczas rozpakowywania archiwum: {safeErrorMessage}");
                 throw new Exception(safeErrorMessage, ex.InnerException);
             }
         }
+
 
 
 
