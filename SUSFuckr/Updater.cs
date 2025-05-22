@@ -93,7 +93,7 @@ namespace SUSFuckr
 
             if (File.Exists(depsPath))
             {
-                string updaterExeUrl = "https://susfuckr.boracik.pl/susfuckr/versions/Updater.exe";
+                string updaterExeUrl = "https://susfuckr.boracik.pl/susfuckr/updater/Updater.exe";
                 string tempUpdaterPath = Path.Combine(Path.GetTempPath(), "Updater.exe");
 
                 using (HttpClient client = new HttpClient())
