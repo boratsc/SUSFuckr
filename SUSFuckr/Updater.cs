@@ -72,23 +72,29 @@ namespace SUSFuckr
 
         private bool NeedsUpdaterUpdate()
         {
-            string appDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)!;
-            string updaterDir = Path.Combine(appDir, "updater");
+            string? appDirPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
+            if (string.IsNullOrEmpty(appDirPath)) return false;
+
+            string updaterDir = Path.Combine(appDirPath, "updater");
             string depsPath = Path.Combine(updaterDir, "Updater.deps.json");
             return File.Exists(depsPath);
         }
 
         private bool NeedsCleanup()
         {
-            string appDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)!;
-            string runtimeConfigPath = Path.Combine(appDir, "SUSFuckr.runtimeconfig.json");
+            string? appDirPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
+            if (string.IsNullOrEmpty(appDirPath)) return false;
+
+            string runtimeConfigPath = Path.Combine(appDirPath, "SUSFuckr.runtimeconfig.json");
             return File.Exists(runtimeConfigPath);
         }
 
         private async Task UpdateUpdaterIfNeededAsync()
         {
-            string appDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)!;
-            string updaterDir = Path.Combine(appDir, "updater");
+            string? appDirPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
+            if (string.IsNullOrEmpty(appDirPath)) return;
+
+            string updaterDir = Path.Combine(appDirPath, "updater");
             string depsPath = Path.Combine(updaterDir, "Updater.deps.json");
 
             if (File.Exists(depsPath))
@@ -124,21 +130,23 @@ namespace SUSFuckr
 
         private void CleanupOldFrameworkFilesIfNeeded()
         {
-            string appDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)!;
-            string runtimeConfigPath = Path.Combine(appDir, "SUSFuckr.runtimeconfig.json");
+            string? appDirPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
+            if (string.IsNullOrEmpty(appDirPath)) return;
+
+            string runtimeConfigPath = Path.Combine(appDirPath, "SUSFuckr.runtimeconfig.json");
 
             if (File.Exists(runtimeConfigPath))
             {
                 Console.WriteLine("Wykryto plik SUSFuckr.runtimeconfig.json – sprz¹tanie starych plików...");
 
                 var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-                {
-                    "susfuckr.exe",
-                    "appsettings.json",
-                    "config.json"
-                };
+        {
+            "susfuckr.exe",
+            "appsettings.json",
+            "config.json"
+        };
 
-                foreach (var file in Directory.GetFiles(appDir))
+                foreach (var file in Directory.GetFiles(appDirPath))
                 {
                     string fileName = Path.GetFileName(file);
                     if (!allowed.Contains(fileName))
@@ -156,7 +164,7 @@ namespace SUSFuckr
                 }
 
                 // Usuñ katalog runtimes jeœli istnieje
-                string runtimesDir = Path.Combine(appDir, "runtimes");
+                string runtimesDir = Path.Combine(appDirPath, "runtimes");
                 if (Directory.Exists(runtimesDir))
                 {
                     try
@@ -171,7 +179,6 @@ namespace SUSFuckr
                 }
             }
         }
-
 
         private async Task DownloadAndRunUpdaterAsync(string latestVersion)
         {
@@ -199,14 +206,19 @@ namespace SUSFuckr
                 // 3. Aktualizuj konfiguracjê
                 await UpdateConfigurationBeforeExitAsync();
 
-                string appDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)!;
-                string updaterPath = Path.Combine(appDir, "updater", "updater.exe");
+                string? appDirPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
+                if (string.IsNullOrEmpty(appDirPath))
+                {
+                    throw new InvalidOperationException("Nie mo¿na okreœliæ katalogu aplikacji.");
+                }
+
+                string updaterPath = Path.Combine(appDirPath, "updater", "updater.exe");
 
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = updaterPath,
                     UseShellExecute = true,
-                    Arguments = $"\"{appDir}\" \"{tempFilePath}\""
+                    Arguments = $"\"{appDirPath}\" \"{tempFilePath}\""
                 });
 
                 Environment.Exit(0);
@@ -222,10 +234,16 @@ namespace SUSFuckr
         {
             try
             {
-                var tempFilePath = Path.Combine(Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)!, "config.temp.json");
+                string? appDirPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
+                if (string.IsNullOrEmpty(appDirPath))
+                {
+                    throw new InvalidOperationException("Nie mo¿na okreœliæ katalogu aplikacji.");
+                }
+
+                var tempFilePath = Path.Combine(appDirPath, "config.temp.json");
                 using (HttpClient client = new HttpClient())
                 {
-                    string updateServerUrl = configuration["Configuration:UpdateServerUrl"];
+                    string? updateServerUrl = configuration["Configuration:UpdateServerUrl"];
                     if (string.IsNullOrEmpty(updateServerUrl))
                     {
                         throw new InvalidOperationException("UpdateServerUrl is null or empty.");
@@ -247,5 +265,6 @@ namespace SUSFuckr
                 MessageBox.Show($"B³¹d podczas aktualizacji konfiguracji: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
     }
 }

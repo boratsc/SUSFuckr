@@ -573,12 +573,14 @@ namespace SUSFuckr
                         PngFileName = "Vanilla.png",
                         InstallPath = path,
                         GitHubRepoOrLink = null,
+                        EpicGitHubRepoOrLink = string.Empty, // Dodaj to pole
                         ModType = "Vanilla",
                         DllInstallPath = null,
-                        LastUpdated = null,
+                        LastUpdated = DateTime.Now,
                         AmongVersion = version,
                         Description = $"Wykryto wersję {mode}"
                     };
+
                     modConfigs.Add(vanillaMod);
                 }
                 else
@@ -612,12 +614,14 @@ namespace SUSFuckr
                         PngFileName = "Vanilla.png",
                         InstallPath = "",
                         GitHubRepoOrLink = null,
+                        EpicGitHubRepoOrLink = string.Empty, // Dodaj to pole
                         ModType = "Vanilla",
                         DllInstallPath = null,
-                        LastUpdated = null,
+                        LastUpdated = DateTime.Now,
                         AmongVersion = "Nieznana",
                         Description = "Nie znaleziono Among Us.exe."
                     };
+
                     modConfigs.Add(vanillaMod);
                     ConfigManager.SaveConfig(modConfigs);
                 }
@@ -1236,12 +1240,14 @@ namespace SUSFuckr
                                 PngFileName = "Vanilla.png",
                                 InstallPath = directoryName.Replace('/', '\\'),
                                 GitHubRepoOrLink = null,
+                                EpicGitHubRepoOrLink = string.Empty, // Dodaj to pole
                                 ModType = "Vanilla",
                                 DllInstallPath = null,
                                 ModVersion = "",
-                                LastUpdated = null,
+                                LastUpdated = DateTime.Now,
                                 AmongVersion = "2020.3.45.6687953"
                             };
+
                             modConfigs.Add(newConfig);
                         }
 

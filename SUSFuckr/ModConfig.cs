@@ -13,11 +13,12 @@ namespace SUSFuckr
         public string ModName { get; set; } = string.Empty;
         public string PngFileName { get; set; } = string.Empty;
         public string InstallPath { get; set; } = string.Empty;
-        public string? GitHubRepoOrLink { get; set; } = string.Empty;
+        public string GitHubRepoOrLink { get; set; } = string.Empty;
+        public string EpicGitHubRepoOrLink { get; set; } = string.Empty; // Nowe pole
         public string ModType { get; set; } = string.Empty;
         public string? DllInstallPath { get; set; }
         public string ModVersion { get; set; } = string.Empty;
-        public DateTime? LastUpdated { get; set; } = DateTime.Now;
+        public DateTime LastUpdated { get; set; }
         public string AmongVersion { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
     }

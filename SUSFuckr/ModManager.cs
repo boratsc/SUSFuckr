@@ -161,14 +161,18 @@ namespace SUSFuckr
 
             // 6. Rozpakuj moda do temp
             string tempExtractPath = Path.Combine(tempDir, "extractMod");
-            if (Directory.Exists(tempExtractPath))
-                Directory.Delete(tempExtractPath, true);
+
+            // Dodaj bardziej agresywne czyszczenie katalogu
+            await SafeDeleteDirectory(tempExtractPath);
             Directory.CreateDirectory(tempExtractPath);
 
             try
             {
                 UIOutput.Write($"[INFO] Rozpakowujê archiwum moda: {modFile} do {tempExtractPath}");
-                ZipFile.ExtractToDirectory(modFile, tempExtractPath);
+
+                // U¿yj ExtractToDirectory z nadpisywaniem plików
+                ZipFile.ExtractToDirectory(modFile, tempExtractPath, overwriteFiles: true);
+
                 UIOutput.Write($"[INFO] Rozpakowano archiwum moda.");
             }
             catch (Exception ex)
@@ -179,23 +183,28 @@ namespace SUSFuckr
             }
 
             // 7. Skopiuj pliki moda do katalogu moda
-            string? sourcePath;
+            string sourcePath; // Zmieniam na non-nullable
             if (Directory.Exists(Path.Combine(tempExtractPath, "BepInEx")))
             {
                 sourcePath = tempExtractPath;
             }
             else
             {
-                sourcePath = Directory.GetDirectories(tempExtractPath).FirstOrDefault();
-                if (sourcePath == null)
+                var tempSourcePath = Directory.GetDirectories(tempExtractPath).FirstOrDefault();
+                if (tempSourcePath == null)
                 {
                     UIOutput.Write($"[ERROR] Nie znaleziono plików do skopiowania.");
                     MessageBox.Show("Nie znaleziono plików do skopiowania.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
+                sourcePath = tempSourcePath;
             }
+
             UIOutput.Write($"[INFO] Kopiujê pliki moda z {sourcePath} do {modFolderPath}");
             CopyContent(sourcePath, modFolderPath);
+
+
+
 
             // 8. Zapisz konfiguracjê i posprz¹taj temp
             modConfig.InstallPath = modFolderPath;
@@ -283,14 +292,19 @@ namespace SUSFuckr
                 UIOutput.Write($"[INFO] Rozpakowujê archiwum 7z: {archivePath} do {extractPath} (z has³em)");
 
                 // Œcie¿ka do 7z.exe w katalogu aplikacji
-                string appDir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName)!;
-                string sevenZipPath = Path.Combine(appDir, "tools", "7z.exe");
+                string? appDirPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
+                if (string.IsNullOrEmpty(appDirPath))
+                {
+                    throw new InvalidOperationException("Nie mo¿na okreœliæ katalogu aplikacji.");
+                }
+
+                string sevenZipPath = Path.Combine(appDirPath, "tools", "7z.exe");
 
                 Directory.CreateDirectory(extractPath);
 
                 if (!File.Exists(sevenZipPath))
                 {
-                    UIOutput.Write($"[ERROR] Nie znaleziono 7z.exe w katalogu: {Path.Combine(appDir, "tools")}");
+                    UIOutput.Write($"[ERROR] Nie znaleziono 7z.exe w katalogu: {Path.Combine(appDirPath, "tools")}");
                     throw new FileNotFoundException($"Nie znaleziono 7z.exe: {sevenZipPath}");
                 }
 
@@ -329,6 +343,98 @@ namespace SUSFuckr
 
 
 
+        private async Task SafeDeleteDirectory(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+                return;
+
+            int maxRetries = 3;
+            int currentRetry = 0;
+
+            while (currentRetry < maxRetries)
+            {
+                try
+                {
+                    // Spróbuj usun¹æ katalog normalnie
+                    Directory.Delete(directoryPath, true);
+                    UIOutput.Write($"[INFO] Pomyœlnie usuniêto katalog: {directoryPath}");
+                    return;
+                }
+                catch (IOException ex) when (currentRetry < maxRetries - 1)
+                {
+                    UIOutput.Write($"[WARNING] Próba {currentRetry + 1} usuniêcia katalogu nieudana: {ex.Message}");
+                    currentRetry++;
+
+                    // Spróbuj zwolniæ pliki poprzez GC
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                    // Odczekaj chwilê
+                    await Task.Delay(1000);
+
+                    // Spróbuj usun¹æ pliki jeden po jednym
+                    try
+                    {
+                        await ForceDeleteDirectory(directoryPath);
+                        return;
+                    }
+                    catch (Exception innerEx)
+                    {
+                        UIOutput.Write($"[WARNING] Nie uda³o siê wymusiæ usuniêcia: {innerEx.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    UIOutput.Write($"[ERROR] B³¹d podczas usuwania katalogu: {ex.Message}");
+                    throw;
+                }
+            }
+
+            throw new IOException($"Nie uda³o siê usun¹æ katalogu {directoryPath} po {maxRetries} próbach.");
+        }
+
+        private async Task ForceDeleteDirectory(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+                return;
+
+            // Usuñ atrybuty tylko do odczytu z wszystkich plików
+            foreach (string file in Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                    File.Delete(file);
+                }
+                catch (Exception ex)
+                {
+                    UIOutput.Write($"[WARNING] Nie uda³o siê usun¹æ pliku {file}: {ex.Message}");
+                }
+            }
+
+            // Usuñ katalogi
+            foreach (string dir in Directory.GetDirectories(directoryPath, "*", SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    await ForceDeleteDirectory(dir);
+                }
+                catch (Exception ex)
+                {
+                    UIOutput.Write($"[WARNING] Nie uda³o siê usun¹æ katalogu {dir}: {ex.Message}");
+                }
+            }
+
+            try
+            {
+                Directory.Delete(directoryPath, false);
+            }
+            catch (Exception ex)
+            {
+                UIOutput.Write($"[WARNING] Nie uda³o siê usun¹æ g³ównego katalogu {directoryPath}: {ex.Message}");
+            }
+        }
+
 
         // Metoda pomocnicza u¿ywaj¹ca oryginalnej biblioteki SevenZipExtractor
         private void ExtractWithSevenZipExtractor(string archivePath, string extractPath, string password)
@@ -356,12 +462,16 @@ namespace SUSFuckr
 
             using (var process = System.Diagnostics.Process.Start(startInfo))
             {
+                if (process == null)
+                    throw new Exception("Nie uda³o siê uruchomiæ procesu 7z.exe");
+
                 process.WaitForExit();
                 if (process.ExitCode != 0)
                 {
                     throw new Exception($"Nie uda³o siê rozpakowaæ archiwum. Kod b³êdu: {process.ExitCode}");
                 }
             }
+
         }
 
 
