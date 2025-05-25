@@ -34,7 +34,7 @@ namespace SUSFuckr
         private readonly string appVersion = string.Empty;
         private ToolTip toolTip;
         private Updater updater;
-        private ModConfiguration selectedModConfig;
+        private ModConfiguration? selectedModConfig;
         private ProgressBar progressBarBusy;
         private ToolStripStatusLabel statusLabel;
        
@@ -106,10 +106,10 @@ namespace SUSFuckr
 
             // Inicjalizacja updatera i sprawdzanie wersji
             updater = new Updater(appVersion, Configuration);
-            updater.CheckAndPromptForUpdateAsync();
+            _ = updater.CheckAndPromptForUpdateAsync();
 
             // Tworzenie menu
-            
+
 
             // Inicjalizacja konfiguracji modów
             ModConfigHandler.Initialize(Configuration);
@@ -129,7 +129,7 @@ namespace SUSFuckr
             // Dodatkowe konfiguracje
             GameLocator.CheckAndSetupVanillaMod(modConfigs, Configuration);
             UIOutput.Write("Aplikacja uruchomiona poprawnie");
-            Diagnostics.LogModsAndPlugins();
+            Diagnostics.LogModsAndPlugins(appVersion);
         }
 
 
@@ -301,7 +301,7 @@ namespace SUSFuckr
             this.Controls.Add(menuStrip);         
         }
 
-        private void PathSettingsMenuItem_Click(object sender, EventArgs e)
+        private void PathSettingsMenuItem_Click(object? sender, EventArgs e)
         {
             using (var pathSettingsForm = new PathSettingsForm())
             {
@@ -342,8 +342,12 @@ namespace SUSFuckr
                             string jsonContent = File.ReadAllText(filePath);
 
                             // Deserializacja JSON
-                            dynamic settings = Newtonsoft.Json.JsonConvert.DeserializeObject(jsonContent);
-
+                            dynamic? settings = Newtonsoft.Json.JsonConvert.DeserializeObject(jsonContent);
+                            if (settings == null)
+                            {
+                                MessageBox.Show("Błąd podczas odczytu pliku konfiguracyjnego.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                return;
+                            }
                             // Generowanie nowego kodu
                             string customCode = GenerateCustomCode(numPlayers);
 
@@ -467,7 +471,7 @@ namespace SUSFuckr
         }
 
 
-        private async void UpdateApplicationMenuItem_Click(object sender, EventArgs e)
+        private async void UpdateApplicationMenuItem_Click(object? sender, EventArgs e)
         {
             try
             {
@@ -493,7 +497,8 @@ namespace SUSFuckr
             {
                 selectedModConfig = updatedConfig;
                 UpdateFormDisplay(updatedConfig); //  przyciski i ikonki bazują na aktualnym stanie
-                RefreshSingleIcon(selectedIcon);
+                if (selectedIcon != null)
+                    RefreshSingleIcon(selectedIcon);
                 RestartApplication();
             }
         }
@@ -551,16 +556,19 @@ namespace SUSFuckr
         {
             modConfigs = ConfigManager.LoadConfig(); // Ładujemy istniejące konfiguracje
             var vanillaMod = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
+
             // Sprawdź wersję gry
-            string mode = Configuration["Configuration:Mode"] ?? "steam"; // Default to steam
+            string? mode = Configuration["Configuration:Mode"] ?? "steam"; // Zmień na nullable
             string? path = vanillaMod?.InstallPath;
+
             path = path != null && File.Exists(Path.Combine(path, "Among Us.exe"))
                 ? path
                 : GameLocator.TryFindAmongUsPath(out mode);
+
             // Aktualizuj konfigurację w zależności od znalezionej wersji
             if (path != null)
             {
-                Configuration["Configuration:Mode"] = mode;
+                Configuration["Configuration:Mode"] = mode ?? "steam"; // Użyj operatora ?? dla bezpieczeństwa
                 var version = GetGameVersion(path);
                 textBoxPath.Text = path.Replace('/', '\\');
                 labelVersion.Text = "Wersja: " + version;
@@ -572,13 +580,13 @@ namespace SUSFuckr
                         ModName = "AmongUs",
                         PngFileName = "Vanilla.png",
                         InstallPath = path,
-                        GitHubRepoOrLink = null,
-                        EpicGitHubRepoOrLink = string.Empty, // Dodaj to pole
+                        GitHubRepoOrLink = string.Empty,
+                        EpicGitHubRepoOrLink = string.Empty,
                         ModType = "Vanilla",
-                        DllInstallPath = null,
+                        DllInstallPath = string.Empty,
                         LastUpdated = DateTime.Now,
                         AmongVersion = version,
-                        Description = $"Wykryto wersję {mode}"
+                        Description = $"Wykryto wersję {mode ?? "steam"}"
                     };
 
                     modConfigs.Add(vanillaMod);
@@ -613,10 +621,10 @@ namespace SUSFuckr
                         ModName = "AmongUs",
                         PngFileName = "Vanilla.png",
                         InstallPath = "",
-                        GitHubRepoOrLink = null,
-                        EpicGitHubRepoOrLink = string.Empty, // Dodaj to pole
+                        GitHubRepoOrLink = string.Empty,
+                        EpicGitHubRepoOrLink = string.Empty, 
                         ModType = "Vanilla",
-                        DllInstallPath = null,
+                        DllInstallPath = string.Empty,
                         LastUpdated = DateTime.Now,
                         AmongVersion = "Nieznana",
                         Description = "Nie znaleziono Among Us.exe."
@@ -719,7 +727,7 @@ namespace SUSFuckr
             }
         }
 
-        private PictureBox? selectedIcon = null;
+        private PictureBox? selectedIcon = null!;
         private Dictionary<PictureBox, Bitmap> originalImages = new Dictionary<PictureBox, Bitmap>();
         private void ConfigureModComponents(List<ModConfiguration> configs)
         {
@@ -808,10 +816,10 @@ namespace SUSFuckr
         {
             if (e.Button == MouseButtons.Right)
             {
-                var clickedIcon = sender as PictureBox;
+                if (sender is not PictureBox clickedIcon) return;
                 if (clickedIcon != null)
                 {
-                    string clickedModName = clickedIcon.Name.Replace("gameIcon_", "");
+                    string clickedModName = clickedIcon?.Name?.Replace("gameIcon_", "") ?? "";
                     var clickedModConfig = modConfigs.FirstOrDefault(config => config.ModName == clickedModName);
 
                     if (clickedModConfig != null)
@@ -854,9 +862,12 @@ namespace SUSFuckr
                                     }
 
                                     // Tworzenie skrótu przez Windows Script Host
-                                    Type shellType = Type.GetTypeFromProgID("WScript.Shell");
-                                    dynamic shell = Activator.CreateInstance(shellType);
+                                    Type? shellType = Type.GetTypeFromProgID("WScript.Shell");
+                                    if (shellType == null) return;
+                                    dynamic? shell = Activator.CreateInstance(shellType);
+                                    if (shell == null) return;
                                     var shortcut = shell.CreateShortcut(shortcutPath);
+
                                     shortcut.TargetPath = targetPath;
                                     shortcut.WorkingDirectory = clickedModConfig.InstallPath;
                                     shortcut.WindowStyle = 1;
@@ -891,7 +902,8 @@ namespace SUSFuckr
                         contextMenu.Items.Add(searchRolesItem);
 
                         // Wyświetl menu kontekstowe w miejscu kliknięcia
-                        contextMenu.Show(clickedIcon, e.Location);
+                        if (clickedIcon != null)
+                            contextMenu.Show(clickedIcon, e.Location);
                     }
                 }
             }
@@ -1011,7 +1023,7 @@ namespace SUSFuckr
 
                 // Aktualizacja wybranej ikony
                 selectedIcon = clickedIcon;
-                UpdateFormDisplay(clickedModConfig);
+                if (clickedModConfig != null) UpdateFormDisplay(clickedModConfig);
             }
         }
 
@@ -1229,7 +1241,7 @@ namespace SUSFuckr
                         var existingConfig = modConfigs.FirstOrDefault(x => x.ModName == "AmongUs");
                         if (existingConfig != null)
                         {
-                            existingConfig.InstallPath = directoryName.Replace('/', '\\');
+                            existingConfig.InstallPath = directoryName?.Replace('/', '\\') ?? "";
                             existingConfig.AmongVersion = "2020.3.45.6687953";
                         }
                         else
@@ -1239,10 +1251,10 @@ namespace SUSFuckr
                                 ModName = "AmongUs",
                                 PngFileName = "Vanilla.png",
                                 InstallPath = directoryName.Replace('/', '\\'),
-                                GitHubRepoOrLink = null,
+                                GitHubRepoOrLink = string.Empty,
                                 EpicGitHubRepoOrLink = string.Empty, // Dodaj to pole
                                 ModType = "Vanilla",
-                                DllInstallPath = null,
+                                DllInstallPath = string.Empty,
                                 ModVersion = "",
                                 LastUpdated = DateTime.Now,
                                 AmongVersion = "2020.3.45.6687953"
@@ -1311,7 +1323,7 @@ namespace SUSFuckr
                 {
                     ModDelete.DeleteMod(modConfig, modConfigs);
                     UpdateFormDisplay(modConfig);
-                    RefreshSingleIcon(selectedIcon);  // Odśwież tylko wybraną ikonę
+                    if (selectedIcon != null) RefreshSingleIcon(selectedIcon);
                 }
             }
             else
