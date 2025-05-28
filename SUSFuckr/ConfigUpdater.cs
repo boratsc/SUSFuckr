@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace SUSFuckr
@@ -40,10 +41,10 @@ namespace SUSFuckr
             existingConfig.ModType = newConfig.ModType;
             existingConfig.DllInstallPath = newConfig.DllInstallPath;
             existingConfig.ModVersion = newConfig.ModVersion;
-            existingConfig.LastUpdated = newConfig.LastUpdated;
+            existingConfig.LastUpdated = newConfig.LastUpdated; // Teraz obs³uguje null
             existingConfig.AmongVersion = newConfig.AmongVersion;
-            existingConfig.Description = newConfig.Description; // Aktualizujemy opis
-            existingConfig.ModName = newConfig.ModName; // Aktualizacja ModName
+            existingConfig.Description = newConfig.Description;
+            existingConfig.ModName = newConfig.ModName;
         }
     }
 }

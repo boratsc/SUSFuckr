@@ -18,7 +18,7 @@ namespace SUSFuckr
         public string ModType { get; set; } = string.Empty;
         public string? DllInstallPath { get; set; }
         public string ModVersion { get; set; } = string.Empty;
-        public DateTime LastUpdated { get; set; }
+        public DateTime? LastUpdated { get; set; }
         public string AmongVersion { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
     }
