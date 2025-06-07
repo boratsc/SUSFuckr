@@ -48,6 +48,10 @@ namespace SUSFuckr
             {
                 try
                 {
+                    // Dodaj token autoryzacji tak jak w UpdateConfigMenuItem_Click
+                    string downloadToken = SecretProvider.GetDownloadToken();
+                    httpClient.DefaultRequestHeaders.Add("Authorization", downloadToken);
+
                     var response = await httpClient.GetStringAsync(configApiUrl);
                     return JsonSerializer.Deserialize<List<ModConfiguration>>(response) ?? new List<ModConfiguration>();
                 }
