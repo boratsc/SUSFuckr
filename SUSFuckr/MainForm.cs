@@ -46,6 +46,9 @@ namespace SUSFuckr
 
             var h = this.Handle;
 
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
+
             UIOutput.LineLogged += text =>
             {
                 if (this.IsHandleCreated)
@@ -676,6 +679,10 @@ namespace SUSFuckr
 
 
             ConfigureModComponents(modConfigs.Where(x => x.ModName != "AmongUs" && x.ModType != "dll").ToList()); // Exclude DLL mods
+
+            // Sprawdzanie wersji modów
+            _ = Task.Run(async () => await ModUpdateChecker.CheckForModUpdatesAsync(Configuration));
+
         }
 
         private void UpdateFormDisplay(ModConfiguration modConfig)

@@ -8,6 +8,7 @@ using System.Windows.Forms;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
+using System.Reflection;
 
 namespace SUSFuckr
 {
@@ -64,99 +65,137 @@ namespace SUSFuckr
             string vanilla7zPath = Path.Combine(vanillaDir, vanilla7zName + ".7z");
             string fileUrlAmongUs = $"{baseUrl}api/susfuckr-download-version?version={vanilla7zName}";
 
+            // Deklaracje zmiennych które bêd¹ u¿ywane po pêtli
+            string tempDir = Path.Combine(baseDirectory, "temp");
+            string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
+            string modFile = Path.Combine(tempDir, "mod.zip");
+
             // 2. Pobierz vanilla 7z jeœli nie istnieje
-            if (!File.Exists(vanilla7zPath))
+            bool needsDownload = !File.Exists(vanilla7zPath);
+
+            while (true) // Pêtla dla ponownego pobierania w przypadku b³êdów
             {
-                UIOutput.Write($"[INFO] Pobieram vanilla: {fileUrlAmongUs}");
-                progressBar.Visible = true;
-                progressBar.Style = ProgressBarStyle.Continuous;
-                progressLabel.Visible = true;
-                progressLabel.Text = "Plik 1 z 2 - 0% pobierania (gra)...";
-
-                bool downloaded = false;
-                do
+                if (needsDownload)
                 {
-                    downloaded = await DownloadFileWithMd5CheckAsync(fileUrlAmongUs, vanilla7zPath, progressBar, progressLabel, "1");
-                    if (!downloaded)
-                    {
-                        var retry = MessageBox.Show(
-                            "Wyst¹pi³ b³¹d podczas pobierania pliku vanilla lub suma kontrolna jest nieprawid³owa. Czy chcesz spróbowaæ ponownie?",
-                            "B³¹d pobierania",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question);
+                    UIOutput.Write($"[INFO] Pobieram vanilla: {fileUrlAmongUs}");
+                    progressBar.Visible = true;
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    progressLabel.Visible = true;
+                    progressLabel.Text = "Plik 1 z 2 - 0% pobierania (gra)...";
 
-                        if (retry == DialogResult.Yes)
+                    bool downloaded = false;
+                    do
+                    {
+                        downloaded = await DownloadFileWithMd5CheckAsync(fileUrlAmongUs, vanilla7zPath, progressBar, progressLabel, "1");
+                        if (!downloaded)
                         {
-                            if (File.Exists(vanilla7zPath))
-                                File.Delete(vanilla7zPath);
+                            var retry = MessageBox.Show(
+                                "Wyst¹pi³ b³¹d podczas pobierania pliku vanilla lub suma kontrolna jest nieprawid³owa. Czy chcesz spróbowaæ ponownie?",
+                                "B³¹d pobierania",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question);
+
+                            if (retry == DialogResult.Yes)
+                            {
+                                if (File.Exists(vanilla7zPath))
+                                    File.Delete(vanilla7zPath);
+                            }
+                            else
+                            {
+                                if (File.Exists(vanilla7zPath))
+                                    File.Delete(vanilla7zPath);
+                                return;
+                            }
                         }
-                        else
+                    } while (!downloaded);
+
+                    UIOutput.Write($"[INFO] Pobrano vanilla do: {vanilla7zPath}");
+                }
+                else
+                {
+                    UIOutput.Write($"[INFO] Plik vanilla ju¿ istnieje: {vanilla7zPath}");
+                }
+
+                // SprawdŸ rozmiar pliku
+                if (!File.Exists(vanilla7zPath) || new FileInfo(vanilla7zPath).Length < 1000)
+                {
+                    UIOutput.Write($"[ERROR] Pobrany plik vanilla jest nieprawid³owy lub pusty. SprawdŸ token i wersjê.");
+                    MessageBox.Show("Pobrany plik vanilla jest nieprawid³owy lub pusty. SprawdŸ token i wersjê.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // 3. Pobierz moda
+                Directory.CreateDirectory(tempDir);
+                if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
+                {
+                    UIOutput.Write($"[INFO] Pobieram moda: {modConfig.GitHubRepoOrLink}");
+                    progressBar.Visible = true;
+                    progressLabel.Text = "Plik 2 z 2 - 0% pobierania (mod)...";
+                    await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar, progressLabel, "2");
+                    UIOutput.Write($"[INFO] Pobrano moda do: {modFile}");
+                }
+                else
+                {
+                    UIOutput.Write($"[ERROR] Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.");
+                    MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                progressBar.Visible = false;
+
+                // 4. Przygotuj katalog moda
+                if (Directory.Exists(modFolderPath))
+                {
+                    UIOutput.Write($"[INFO] Usuwam istniej¹cy katalog moda: {modFolderPath}");
+                    Directory.Delete(modFolderPath, true);
+                }
+                Directory.CreateDirectory(modFolderPath);
+
+                // 5. Rozpakuj vanilla 7z do katalogu moda
+                try
+                {
+                    UIOutput.Write($"[INFO] Rozpakowujê vanilla 7z: {vanilla7zPath} do {modFolderPath}");
+                    await Task.Run(() => Extract7zWithPassword(vanilla7zPath, modFolderPath, zipPassword));
+                    UIOutput.Write($"[INFO] Rozpakowano vanilla.");
+
+                    // Jeœli rozpakowywanie siê uda³o, wychodzimy z pêtli
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    UIOutput.Write($"[ERROR] B³¹d podczas rozpakowywania archiwum: {ex}");
+
+                    // Usuñ uszkodzony plik
+                    if (File.Exists(vanilla7zPath))
+                    {
+                        try
                         {
-                            if (File.Exists(vanilla7zPath))
-                                File.Delete(vanilla7zPath);
-                            return;
+                            File.Delete(vanilla7zPath);
+                            UIOutput.Write($"[INFO] Usuniêto uszkodzony plik: {vanilla7zPath}");
+                        }
+                        catch (Exception deleteEx)
+                        {
+                            UIOutput.Write($"[WARNING] Nie uda³o siê usun¹æ uszkodzonego pliku: {deleteEx.Message}");
                         }
                     }
-                } while (!downloaded);
 
-                UIOutput.Write($"[INFO] Pobrano vanilla do: {vanilla7zPath}");
-            }
-            else
-            {
-                UIOutput.Write($"[INFO] Plik vanilla ju¿ istnieje: {vanilla7zPath}");
-            }
+                    // Zapytaj u¿ytkownika czy chce pobraæ ponownie
+                    var retryResult = MessageBox.Show(
+                        $"B³¹d podczas rozpakowywania archiwum vanilla:\n{ex.Message}\n\nPlik mo¿e byæ uszkodzony. Czy chcesz pobraæ go ponownie?",
+                        "B³¹d rozpakowywania",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
 
-
-            // SprawdŸ rozmiar pliku
-            if (!File.Exists(vanilla7zPath) || new FileInfo(vanilla7zPath).Length < 1000)
-            {
-                UIOutput.Write($"[ERROR] Pobrany plik vanilla jest nieprawid³owy lub pusty. SprawdŸ token i wersjê.");
-                MessageBox.Show("Pobrany plik vanilla jest nieprawid³owy lub pusty. SprawdŸ token i wersjê.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // 3. Pobierz moda
-            string tempDir = Path.Combine(baseDirectory, "temp");
-            Directory.CreateDirectory(tempDir);
-            string modFile = Path.Combine(tempDir, "mod.zip");
-            if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
-            {
-                UIOutput.Write($"[INFO] Pobieram moda: {modConfig.GitHubRepoOrLink}");
-                progressBar.Visible = true;
-                progressLabel.Text = "Plik 2 z 2 - 0% pobierania (mod)...";
-                await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar, progressLabel, "2");
-                UIOutput.Write($"[INFO] Pobrano moda do: {modFile}");
-            }
-            else
-            {
-                UIOutput.Write($"[ERROR] Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.");
-                MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            progressBar.Visible = false;
-
-            // 4. Przygotuj katalog moda
-            string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
-            if (Directory.Exists(modFolderPath))
-            {
-                UIOutput.Write($"[INFO] Usuwam istniej¹cy katalog moda: {modFolderPath}");
-                Directory.Delete(modFolderPath, true);
-            }
-            Directory.CreateDirectory(modFolderPath);
-
-            // 5. Rozpakuj vanilla 7z do katalogu moda
-            try
-            {
-                UIOutput.Write($"[INFO] Rozpakowujê vanilla 7z: {vanilla7zPath} do {modFolderPath}");
-                await Task.Run(() => Extract7zWithPassword(vanilla7zPath, modFolderPath, zipPassword));
-
-                UIOutput.Write($"[INFO] Rozpakowano vanilla.");
-            }
-            catch (Exception ex)
-            {
-                UIOutput.Write($"[ERROR] B³¹d podczas rozpakowywania archiwum: {ex}");
-                MessageBox.Show($"B³¹d podczas rozpakowywania archiwum: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+                    if (retryResult == DialogResult.Yes)
+                    {
+                        needsDownload = true; // Oznacz ¿e trzeba pobraæ ponownie
+                        continue; // Kontynuuj pêtlê - pobierz i spróbuj ponownie
+                    }
+                    else
+                    {
+                        // U¿ytkownik nie chce ponownie pobieraæ - zakoñcz
+                        return;
+                    }
+                }
             }
 
             // 6. Rozpakuj moda do temp
@@ -203,9 +242,6 @@ namespace SUSFuckr
             UIOutput.Write($"[INFO] Kopiujê pliki moda z {sourcePath} do {modFolderPath}");
             CopyContent(sourcePath, modFolderPath);
 
-
-
-
             // 8. Zapisz konfiguracjê i posprz¹taj temp
             modConfig.InstallPath = modFolderPath;
             ConfigManager.SaveConfig(modConfigs);
@@ -216,6 +252,8 @@ namespace SUSFuckr
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
+
+
 
         private static void CopyContent(string sourceDir, string destDir)
         {
