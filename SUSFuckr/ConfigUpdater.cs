@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 
 namespace SUSFuckr
@@ -37,13 +38,14 @@ namespace SUSFuckr
         {
             existingConfig.PngFileName = newConfig.PngFileName;
             existingConfig.GitHubRepoOrLink = newConfig.GitHubRepoOrLink;
+            existingConfig.EpicGitHubRepoOrLink = newConfig.EpicGitHubRepoOrLink; 
             existingConfig.ModType = newConfig.ModType;
             existingConfig.DllInstallPath = newConfig.DllInstallPath;
             existingConfig.ModVersion = newConfig.ModVersion;
             existingConfig.LastUpdated = newConfig.LastUpdated;
             existingConfig.AmongVersion = newConfig.AmongVersion;
-            existingConfig.Description = newConfig.Description; // Aktualizujemy opis
-            existingConfig.ModName = newConfig.ModName; // Aktualizacja ModName
+            existingConfig.Description = newConfig.Description;
+            existingConfig.ModName = newConfig.ModName;
         }
     }
 }

@@ -7,7 +7,8 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using System.Linq;
 using Microsoft.Extensions.Configuration;
-
+using System.Diagnostics;
+using System.Reflection;
 
 namespace SUSFuckr
 {
@@ -64,110 +65,153 @@ namespace SUSFuckr
             string vanilla7zPath = Path.Combine(vanillaDir, vanilla7zName + ".7z");
             string fileUrlAmongUs = $"{baseUrl}api/susfuckr-download-version?version={vanilla7zName}";
 
+            // Deklaracje zmiennych które bêd¹ u¿ywane po pêtli
+            string tempDir = Path.Combine(baseDirectory, "temp");
+            string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
+            string modFile = Path.Combine(tempDir, "mod.zip");
+
             // 2. Pobierz vanilla 7z jeœli nie istnieje
-            if (!File.Exists(vanilla7zPath))
+            bool needsDownload = !File.Exists(vanilla7zPath);
+
+            while (true) // Pêtla dla ponownego pobierania w przypadku b³êdów
             {
-                UIOutput.Write($"[INFO] Pobieram vanilla: {fileUrlAmongUs}");
-                progressBar.Visible = true;
-                progressBar.Style = ProgressBarStyle.Continuous;
-                progressLabel.Visible = true;
-                progressLabel.Text = "Plik 1 z 2 - 0% pobierania (gra)...";
-
-                bool downloaded = false;
-                do
+                if (needsDownload)
                 {
-                    downloaded = await DownloadFileWithMd5CheckAsync(fileUrlAmongUs, vanilla7zPath, progressBar, progressLabel, "1");
-                    if (!downloaded)
-                    {
-                        var retry = MessageBox.Show(
-                            "Wyst¹pi³ b³¹d podczas pobierania pliku vanilla lub suma kontrolna jest nieprawid³owa. Czy chcesz spróbowaæ ponownie?",
-                            "B³¹d pobierania",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question);
+                    UIOutput.Write($"[INFO] Pobieram vanilla: {fileUrlAmongUs}");
+                    progressBar.Visible = true;
+                    progressBar.Style = ProgressBarStyle.Continuous;
+                    progressLabel.Visible = true;
+                    progressLabel.Text = "Plik 1 z 2 - 0% pobierania (gra)...";
 
-                        if (retry == DialogResult.Yes)
+                    bool downloaded = false;
+                    do
+                    {
+                        downloaded = await DownloadFileWithMd5CheckAsync(fileUrlAmongUs, vanilla7zPath, progressBar, progressLabel, "1");
+                        if (!downloaded)
                         {
-                            if (File.Exists(vanilla7zPath))
-                                File.Delete(vanilla7zPath);
+                            var retry = MessageBox.Show(
+                                "Wyst¹pi³ b³¹d podczas pobierania pliku vanilla lub suma kontrolna jest nieprawid³owa. Czy chcesz spróbowaæ ponownie?",
+                                "B³¹d pobierania",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Question);
+
+                            if (retry == DialogResult.Yes)
+                            {
+                                if (File.Exists(vanilla7zPath))
+                                    File.Delete(vanilla7zPath);
+                            }
+                            else
+                            {
+                                if (File.Exists(vanilla7zPath))
+                                    File.Delete(vanilla7zPath);
+                                return;
+                            }
                         }
-                        else
+                    } while (!downloaded);
+
+                    UIOutput.Write($"[INFO] Pobrano vanilla do: {vanilla7zPath}");
+                }
+                else
+                {
+                    UIOutput.Write($"[INFO] Plik vanilla ju¿ istnieje: {vanilla7zPath}");
+                }
+
+                // SprawdŸ rozmiar pliku
+                if (!File.Exists(vanilla7zPath) || new FileInfo(vanilla7zPath).Length < 1000)
+                {
+                    UIOutput.Write($"[ERROR] Pobrany plik vanilla jest nieprawid³owy lub pusty. SprawdŸ token i wersjê.");
+                    MessageBox.Show("Pobrany plik vanilla jest nieprawid³owy lub pusty. SprawdŸ token i wersjê.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                // 3. Pobierz moda
+                Directory.CreateDirectory(tempDir);
+                if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
+                {
+                    UIOutput.Write($"[INFO] Pobieram moda: {modConfig.GitHubRepoOrLink}");
+                    progressBar.Visible = true;
+                    progressLabel.Text = "Plik 2 z 2 - 0% pobierania (mod)...";
+                    await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar, progressLabel, "2");
+                    UIOutput.Write($"[INFO] Pobrano moda do: {modFile}");
+                }
+                else
+                {
+                    UIOutput.Write($"[ERROR] Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.");
+                    MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                progressBar.Visible = false;
+
+                // 4. Przygotuj katalog moda
+                if (Directory.Exists(modFolderPath))
+                {
+                    UIOutput.Write($"[INFO] Usuwam istniej¹cy katalog moda: {modFolderPath}");
+                    Directory.Delete(modFolderPath, true);
+                }
+                Directory.CreateDirectory(modFolderPath);
+
+                // 5. Rozpakuj vanilla 7z do katalogu moda
+                try
+                {
+                    UIOutput.Write($"[INFO] Rozpakowujê vanilla 7z: {vanilla7zPath} do {modFolderPath}");
+                    await Task.Run(() => Extract7zWithPassword(vanilla7zPath, modFolderPath, zipPassword));
+                    UIOutput.Write($"[INFO] Rozpakowano vanilla.");
+
+                    // Jeœli rozpakowywanie siê uda³o, wychodzimy z pêtli
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    UIOutput.Write($"[ERROR] B³¹d podczas rozpakowywania archiwum: {ex}");
+
+                    // Usuñ uszkodzony plik
+                    if (File.Exists(vanilla7zPath))
+                    {
+                        try
                         {
-                            if (File.Exists(vanilla7zPath))
-                                File.Delete(vanilla7zPath);
-                            return;
+                            File.Delete(vanilla7zPath);
+                            UIOutput.Write($"[INFO] Usuniêto uszkodzony plik: {vanilla7zPath}");
+                        }
+                        catch (Exception deleteEx)
+                        {
+                            UIOutput.Write($"[WARNING] Nie uda³o siê usun¹æ uszkodzonego pliku: {deleteEx.Message}");
                         }
                     }
-                } while (!downloaded);
 
-                UIOutput.Write($"[INFO] Pobrano vanilla do: {vanilla7zPath}");
-            }
-            else
-            {
-                UIOutput.Write($"[INFO] Plik vanilla ju¿ istnieje: {vanilla7zPath}");
-            }
+                    // Zapytaj u¿ytkownika czy chce pobraæ ponownie
+                    var retryResult = MessageBox.Show(
+                        $"B³¹d podczas rozpakowywania archiwum vanilla:\n{ex.Message}\n\nPlik mo¿e byæ uszkodzony. Czy chcesz pobraæ go ponownie?",
+                        "B³¹d rozpakowywania",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
 
-
-            // SprawdŸ rozmiar pliku
-            if (!File.Exists(vanilla7zPath) || new FileInfo(vanilla7zPath).Length < 1000)
-            {
-                UIOutput.Write($"[ERROR] Pobrany plik vanilla jest nieprawid³owy lub pusty. SprawdŸ token i wersjê.");
-                MessageBox.Show("Pobrany plik vanilla jest nieprawid³owy lub pusty. SprawdŸ token i wersjê.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
-            // 3. Pobierz moda
-            string tempDir = Path.Combine(baseDirectory, "temp");
-            Directory.CreateDirectory(tempDir);
-            string modFile = Path.Combine(tempDir, "mod.zip");
-            if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
-            {
-                UIOutput.Write($"[INFO] Pobieram moda: {modConfig.GitHubRepoOrLink}");
-                progressBar.Visible = true;
-                progressLabel.Text = "Plik 2 z 2 - 0% pobierania (mod)...";
-                await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile, progressBar, progressLabel, "2");
-                UIOutput.Write($"[INFO] Pobrano moda do: {modFile}");
-            }
-            else
-            {
-                UIOutput.Write($"[ERROR] Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.");
-                MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}'.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            progressBar.Visible = false;
-
-            // 4. Przygotuj katalog moda
-            string modFolderPath = Path.Combine(baseDirectory, modConfig.ModName);
-            if (Directory.Exists(modFolderPath))
-            {
-                UIOutput.Write($"[INFO] Usuwam istniej¹cy katalog moda: {modFolderPath}");
-                Directory.Delete(modFolderPath, true);
-            }
-            Directory.CreateDirectory(modFolderPath);
-
-            // 5. Rozpakuj vanilla 7z do katalogu moda
-            try
-            {
-                UIOutput.Write($"[INFO] Rozpakowujê vanilla 7z: {vanilla7zPath} do {modFolderPath}");
-                Extract7zWithPassword(vanilla7zPath, modFolderPath, zipPassword);
-                UIOutput.Write($"[INFO] Rozpakowano vanilla.");
-            }
-            catch (Exception ex)
-            {
-                UIOutput.Write($"[ERROR] B³¹d podczas rozpakowywania archiwum: {ex}");
-                MessageBox.Show($"B³¹d podczas rozpakowywania archiwum: {ex.Message}", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+                    if (retryResult == DialogResult.Yes)
+                    {
+                        needsDownload = true; // Oznacz ¿e trzeba pobraæ ponownie
+                        continue; // Kontynuuj pêtlê - pobierz i spróbuj ponownie
+                    }
+                    else
+                    {
+                        // U¿ytkownik nie chce ponownie pobieraæ - zakoñcz
+                        return;
+                    }
+                }
             }
 
             // 6. Rozpakuj moda do temp
             string tempExtractPath = Path.Combine(tempDir, "extractMod");
-            if (Directory.Exists(tempExtractPath))
-                Directory.Delete(tempExtractPath, true);
+
+            // Dodaj bardziej agresywne czyszczenie katalogu
+            await SafeDeleteDirectory(tempExtractPath);
             Directory.CreateDirectory(tempExtractPath);
 
             try
             {
                 UIOutput.Write($"[INFO] Rozpakowujê archiwum moda: {modFile} do {tempExtractPath}");
-                ZipFile.ExtractToDirectory(modFile, tempExtractPath);
+
+                // U¿yj ExtractToDirectory z nadpisywaniem plików
+                ZipFile.ExtractToDirectory(modFile, tempExtractPath, overwriteFiles: true);
+
                 UIOutput.Write($"[INFO] Rozpakowano archiwum moda.");
             }
             catch (Exception ex)
@@ -178,21 +222,23 @@ namespace SUSFuckr
             }
 
             // 7. Skopiuj pliki moda do katalogu moda
-            string? sourcePath;
+            string sourcePath; // Zmieniam na non-nullable
             if (Directory.Exists(Path.Combine(tempExtractPath, "BepInEx")))
             {
                 sourcePath = tempExtractPath;
             }
             else
             {
-                sourcePath = Directory.GetDirectories(tempExtractPath).FirstOrDefault();
-                if (sourcePath == null)
+                var tempSourcePath = Directory.GetDirectories(tempExtractPath).FirstOrDefault();
+                if (tempSourcePath == null)
                 {
                     UIOutput.Write($"[ERROR] Nie znaleziono plików do skopiowania.");
                     MessageBox.Show("Nie znaleziono plików do skopiowania.", "B³¹d", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
+                sourcePath = tempSourcePath;
             }
+
             UIOutput.Write($"[INFO] Kopiujê pliki moda z {sourcePath} do {modFolderPath}");
             CopyContent(sourcePath, modFolderPath);
 
@@ -206,6 +252,8 @@ namespace SUSFuckr
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
+
+
 
         private static void CopyContent(string sourceDir, string destDir)
         {
@@ -281,20 +329,23 @@ namespace SUSFuckr
             {
                 UIOutput.Write($"[INFO] Rozpakowujê archiwum 7z: {archivePath} do {extractPath} (z has³em)");
 
-                // Œcie¿ka do 7z.exe w podkatalogu
-                string sevenZipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools", "7z.exe");
+                // Œcie¿ka do 7z.exe w katalogu aplikacji
+                string? appDirPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName);
+                if (string.IsNullOrEmpty(appDirPath))
+                {
+                    throw new InvalidOperationException("Nie mo¿na okreœliæ katalogu aplikacji.");
+                }
 
-                // Upewnij siê ¿e katalog docelowy istnieje
+                string sevenZipPath = Path.Combine(appDirPath, "tools", "7z.exe");
+
                 Directory.CreateDirectory(extractPath);
 
-                // SprawdŸ czy plik istnieje
                 if (!File.Exists(sevenZipPath))
                 {
-                    UIOutput.Write($"[ERROR] Nie znaleziono 7z.exe w katalogu: {Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tools")}");
+                    UIOutput.Write($"[ERROR] Nie znaleziono 7z.exe w katalogu: {Path.Combine(appDirPath, "tools")}");
                     throw new FileNotFoundException($"Nie znaleziono 7z.exe: {sevenZipPath}");
                 }
 
-                // U¿yj procesu 7z.exe do wypakowania
                 using (var process = new System.Diagnostics.Process())
                 {
                     process.StartInfo.FileName = sevenZipPath;
@@ -304,7 +355,6 @@ namespace SUSFuckr
                     process.StartInfo.RedirectStandardOutput = true;
                     process.StartInfo.RedirectStandardError = true;
 
-                    // Nie wyœwietlaj has³a w logach! Poka¿ tylko ogóln¹ informacjê
                     UIOutput.Write($"[INFO] Uruchamiam 7z.exe do rozpakowania: {archivePath}");
                     process.Start();
 
@@ -323,13 +373,105 @@ namespace SUSFuckr
             }
             catch (Exception ex)
             {
-                // Upewnij siê, ¿e has³o nie pojawia siê w komunikacie b³êdu
                 string safeErrorMessage = ex.Message.Replace(password, "***HIDDEN***");
                 UIOutput.Write($"[ERROR] B³¹d podczas rozpakowywania archiwum: {safeErrorMessage}");
                 throw new Exception(safeErrorMessage, ex.InnerException);
             }
         }
 
+
+
+        private async Task SafeDeleteDirectory(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+                return;
+
+            int maxRetries = 3;
+            int currentRetry = 0;
+
+            while (currentRetry < maxRetries)
+            {
+                try
+                {
+                    // Spróbuj usun¹æ katalog normalnie
+                    Directory.Delete(directoryPath, true);
+                    UIOutput.Write($"[INFO] Pomyœlnie usuniêto katalog: {directoryPath}");
+                    return;
+                }
+                catch (IOException ex) when (currentRetry < maxRetries - 1)
+                {
+                    UIOutput.Write($"[WARNING] Próba {currentRetry + 1} usuniêcia katalogu nieudana: {ex.Message}");
+                    currentRetry++;
+
+                    // Spróbuj zwolniæ pliki poprzez GC
+                    GC.Collect();
+                    GC.WaitForPendingFinalizers();
+
+                    // Odczekaj chwilê
+                    await Task.Delay(1000);
+
+                    // Spróbuj usun¹æ pliki jeden po jednym
+                    try
+                    {
+                        await ForceDeleteDirectory(directoryPath);
+                        return;
+                    }
+                    catch (Exception innerEx)
+                    {
+                        UIOutput.Write($"[WARNING] Nie uda³o siê wymusiæ usuniêcia: {innerEx.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    UIOutput.Write($"[ERROR] B³¹d podczas usuwania katalogu: {ex.Message}");
+                    throw;
+                }
+            }
+
+            throw new IOException($"Nie uda³o siê usun¹æ katalogu {directoryPath} po {maxRetries} próbach.");
+        }
+
+        private async Task ForceDeleteDirectory(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath))
+                return;
+
+            // Usuñ atrybuty tylko do odczytu z wszystkich plików
+            foreach (string file in Directory.GetFiles(directoryPath, "*", SearchOption.AllDirectories))
+            {
+                try
+                {
+                    File.SetAttributes(file, FileAttributes.Normal);
+                    File.Delete(file);
+                }
+                catch (Exception ex)
+                {
+                    UIOutput.Write($"[WARNING] Nie uda³o siê usun¹æ pliku {file}: {ex.Message}");
+                }
+            }
+
+            // Usuñ katalogi
+            foreach (string dir in Directory.GetDirectories(directoryPath, "*", SearchOption.TopDirectoryOnly))
+            {
+                try
+                {
+                    await ForceDeleteDirectory(dir);
+                }
+                catch (Exception ex)
+                {
+                    UIOutput.Write($"[WARNING] Nie uda³o siê usun¹æ katalogu {dir}: {ex.Message}");
+                }
+            }
+
+            try
+            {
+                Directory.Delete(directoryPath, false);
+            }
+            catch (Exception ex)
+            {
+                UIOutput.Write($"[WARNING] Nie uda³o siê usun¹æ g³ównego katalogu {directoryPath}: {ex.Message}");
+            }
+        }
 
 
         // Metoda pomocnicza u¿ywaj¹ca oryginalnej biblioteki SevenZipExtractor
@@ -358,12 +500,16 @@ namespace SUSFuckr
 
             using (var process = System.Diagnostics.Process.Start(startInfo))
             {
+                if (process == null)
+                    throw new Exception("Nie uda³o siê uruchomiæ procesu 7z.exe");
+
                 process.WaitForExit();
                 if (process.ExitCode != 0)
                 {
                     throw new Exception($"Nie uda³o siê rozpakowaæ archiwum. Kod b³êdu: {process.ExitCode}");
                 }
             }
+
         }
 
 

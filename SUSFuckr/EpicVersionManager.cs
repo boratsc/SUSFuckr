@@ -24,13 +24,15 @@ namespace SUSFuckr
 
         public EpicVersionManager()
         {
+            string exeDir = Path.GetDirectoryName(Environment.ProcessPath)!;
+
             legendaryPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.exe");
             manifestDirectory = AppDomain.CurrentDomain.BaseDirectory;
             installDirectory = PathSettings.ModsInstallPath;
-            appSettingsFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "appsettings.json"); 
+            appSettingsFilePath = Path.Combine(exeDir, "appsettings.json");
 
             logFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "epic.log.txt");
-            legendaryLogFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "legendary.log.txt");
+            legendaryLogFilePath = Path.Combine(exeDir, "legendary.log.txt");
         }
 
         private void LogToFile(string message)
@@ -51,7 +53,7 @@ namespace SUSFuckr
         {
             try
             {
-                LogToFile("Sprawdzanie zainstalowanych aplikacji (legendary.exe list-installed --json)");
+                UIOutput.Write("Sprawdzanie zainstalowanych aplikacji (legendary.exe list-installed --json)");
 
                 string tempFile = Path.Combine(Path.GetTempPath(), "tempepic.json");
 
@@ -68,7 +70,7 @@ namespace SUSFuckr
                 using var proc = Process.Start(psi);
                 if (proc == null)
                 {
-                    LogToFile("Nie udało się uruchomić procesu legendary.exe");
+                    UIOutput.Write("Nie udało się uruchomić procesu legendary.exe");
                     return null;
                 }
 
@@ -78,13 +80,13 @@ namespace SUSFuckr
 
                 if (string.IsNullOrWhiteSpace(stdout))
                 {
-                    LogToFile("Otrzymany JSON jest pusty → brak zainstalowanych aplikacji");
+                    UIOutput.Write("Otrzymany JSON jest pusty → brak zainstalowanych aplikacji");
                     // fallback na ścieżkę vanilla
                     var configs = ConfigManager.LoadConfig();
                     var vanilla = configs.FirstOrDefault(c => c.Id == 0);
                     if (vanilla != null && !string.IsNullOrEmpty(vanilla.InstallPath))
                     {
-                        LogToFile($"Fallback ścieżki vanilla: {vanilla.InstallPath}");
+                        UIOutput.Write($"Fallback ścieżki vanilla: {vanilla.InstallPath}");
                         return vanilla.InstallPath;
                     }
                     return null;
@@ -100,7 +102,7 @@ namespace SUSFuckr
                 }
                 catch (JsonException jsonEx)
                 {
-                    LogToFile($"Błąd parsowania JSON z legendary list-installed: {jsonEx.Message}");
+                    UIOutput.Write($"Błąd parsowania JSON z legendary list-installed: {jsonEx.Message}");
                     return null;
                 }
 
@@ -112,11 +114,11 @@ namespace SUSFuckr
                 var entry = apps.FirstOrDefault(a => a.app_name == EpicAppId);
                 if (entry == null)
                 {
-                    LogToFile($"Brak pozycji {EpicAppId} w tempepic.json");
+                    UIOutput.Write($"Brak pozycji {EpicAppId} w tempepic.json");
                     // spróbuj naprawić manifest używając ścieżki vanilla
                     if (vanillaCfg != null && !string.IsNullOrEmpty(vanillaCfg.InstallPath))
                     {
-                        LogToFile($"Naprawiam brakujący wpis, override ścieżki na: {vanillaCfg.InstallPath}");
+                        UIOutput.Write($"Naprawiam brakujący wpis, override ścieżki na: {vanillaCfg.InstallPath}");
                         await RunLegendaryCommandAsync(
                             $"repair {EpicAppId} --override-install-path \"{vanillaCfg.InstallPath}\" -y");
                         return vanillaCfg.InstallPath;
@@ -126,13 +128,13 @@ namespace SUSFuckr
 
                 // 2) wpis znaleziony
                 string foundPath = entry.install_path;
-                LogToFile($"Legendary zwraca ścieżkę: {foundPath}");
+                UIOutput.Write($"Legendary zwraca ścieżkę: {foundPath}");
 
                 // 3) porównaj z config.json (vanilla) i naprawiaj jeżeli różne
                 if (vanillaCfg != null &&
                     !string.Equals(vanillaCfg.InstallPath, foundPath, StringComparison.OrdinalIgnoreCase))
                 {
-                    LogToFile($"Różnica ścieżek: config.json='{vanillaCfg.InstallPath}', legendary='{foundPath}'. Naprawiam...");
+                    UIOutput.Write($"Różnica ścieżek: config.json='{vanillaCfg.InstallPath}', legendary='{foundPath}'. Naprawiam...");
                     await RunLegendaryCommandAsync(
                         $"repair {EpicAppId} --override-install-path \"{vanillaCfg.InstallPath}\" -y");
                 }
@@ -141,24 +143,65 @@ namespace SUSFuckr
             }
             catch (Exception ex)
             {
-                LogToFile($"ERROR w CheckInstalledAppsAsync: {ex}");
+                UIOutput.Write($"ERROR w CheckInstalledAppsAsync: {ex}");
                 return null;
             }
         }
 
 
+
         private class InstalledApp
         {
-            public string app_name { get; set; }
-            public string install_path { get; set; }
+            public string app_name { get; set; } = string.Empty; // Poprawka: dodano domyślną wartość
+            public string install_path { get; set; } = string.Empty; // Poprawka: dodano domyślną wartość
         }
 
         public async Task ModifyEpicAsync(ModConfiguration modConfig, ProgressBar progressBar, Label progressLabel)
         {
-            if (modConfig == null || string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
+            if (modConfig == null)
             {
-                MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig?.ModName ?? "unknown"}'.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Konfiguracja moda jest nieprawidłowa.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
+            }
+
+            // Wybierz odpowiedni link w zależności od dostępności EpicGitHubRepoOrLink
+            string downloadUrl;
+            bool usingFallback = false;
+
+            if (!string.IsNullOrEmpty(modConfig.EpicGitHubRepoOrLink))
+            {
+                downloadUrl = modConfig.EpicGitHubRepoOrLink;
+                UIOutput.Write($"Używam dedykowanego linku Epic dla moda '{modConfig.ModName}': {downloadUrl}");
+            }
+            else if (!string.IsNullOrEmpty(modConfig.GitHubRepoOrLink))
+            {
+                downloadUrl = modConfig.GitHubRepoOrLink;
+                usingFallback = true;
+                UIOutput.Write($"FALLBACK: Używam standardowego linku Steam dla moda '{modConfig.ModName}' w wersji Epic: {downloadUrl}");
+            }
+            else
+            {
+                UIOutput.Write($"ERROR: Brak jakiegokolwiek adresu URL do pobrania dla moda '{modConfig.ModName}'");
+                MessageBox.Show($"Brak adresu URL do pobrania dla moda '{modConfig.ModName}' w wersji Epic.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // Opcjonalnie: pokaż ostrzeżenie użytkownikowi o fallback
+            if (usingFallback)
+            {
+                var result = MessageBox.Show(
+                    $"Mod '{modConfig.ModName}' nie ma dedykowanej wersji Epic (x64). " +
+                    $"Zostanie użyta wersja Steam (x86), która może nie działać poprawnie.\n\n" +
+                    $"Czy chcesz kontynuować?",
+                    "Ostrzeżenie - Brak wersji Epic",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (result == DialogResult.No)
+                {
+                    UIOutput.Write($"Użytkownik anulował instalację fallback dla moda '{modConfig.ModName}'");
+                    return;
+                }
             }
 
             string baseDirectory = installDirectory;
@@ -168,23 +211,42 @@ namespace SUSFuckr
             progressBar.Visible = true;
             progressBar.Style = ProgressBarStyle.Continuous;
             progressLabel.Text = "Ściąganie moda...";
-            await DownloadFileAsync(modConfig.GitHubRepoOrLink, modFile);
+
+            UIOutput.Write($"Rozpoczynam pobieranie moda '{modConfig.ModName}' z: {downloadUrl}");
+            await DownloadFileAsync(downloadUrl, modFile);
 
             if (!File.Exists(modFile))
             {
-                MessageBox.Show($"Nie udało się pobrać moda z {modFile}.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                UIOutput.Write($"ERROR: Nie udało się pobrać moda z {downloadUrl}");
+                MessageBox.Show($"Nie udało się pobrać moda z {downloadUrl}.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
+            UIOutput.Write($"Pomyślnie pobrano mod do: {modFile}");
+
+            // Reszta kodu pozostaje bez zmian...
             string gameBasePath = Path.Combine(baseDirectory, modConfig.ModName, "AmongUs");
             if (Directory.Exists(gameBasePath))
             {
+                UIOutput.Write($"Usuwam istniejący katalog: {gameBasePath}");
                 Directory.Delete(gameBasePath, true);
             }
             Directory.CreateDirectory(gameBasePath);
             string tempExtractPath = Path.Combine(tempDirectory, "extractMod");
             Directory.CreateDirectory(tempExtractPath);
-            ZipFile.ExtractToDirectory(modFile, tempExtractPath);
+
+            try
+            {
+                UIOutput.Write($"Rozpakowuję archiwum moda: {modFile} do {tempExtractPath}");
+                ZipFile.ExtractToDirectory(modFile, tempExtractPath, overwriteFiles: true);
+                UIOutput.Write("Pomyślnie rozpakowano archiwum moda");
+            }
+            catch (Exception ex)
+            {
+                UIOutput.Write($"ERROR podczas rozpakowywania: {ex.Message}");
+                MessageBox.Show($"Błąd podczas rozpakowywania archiwum: {ex.Message}", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
             string sourcePath = Directory.Exists(Path.Combine(tempExtractPath, "BepInEx"))
                 ? tempExtractPath
@@ -192,11 +254,14 @@ namespace SUSFuckr
 
             if (string.IsNullOrEmpty(sourcePath))
             {
+                UIOutput.Write("ERROR: Nie znaleziono plików do skopiowania");
                 MessageBox.Show("Nie znaleziono plików do skopiowania.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
+            UIOutput.Write($"Kopiuję pliki z {sourcePath} do {gameBasePath}");
             CopyContent(sourcePath, gameBasePath);
+
             var existingConfigs = ConfigManager.LoadConfig();
             var existingConfig = existingConfigs.FirstOrDefault(c => c.Id == modConfig.Id);
 
@@ -204,19 +269,34 @@ namespace SUSFuckr
             {
                 existingConfig.InstallPath = gameBasePath;
                 existingConfig.LastUpdated = DateTime.Now;
+                UIOutput.Write($"Zaktualizowano konfigurację dla istniejącego moda: {modConfig.ModName}");
             }
             else
             {
                 modConfig.InstallPath = gameBasePath;
                 existingConfigs.Add(modConfig);
+                UIOutput.Write($"Dodano nową konfigurację dla moda: {modConfig.ModName}");
             }
 
             ConfigManager.SaveConfig(existingConfigs);
             Directory.Delete(tempDirectory, true);
             progressBar.Visible = false;
+
+            UIOutput.Write($"SUCCESS: Instalacja moda '{modConfig.ModName}' zakończona pomyślnie");
+            if (usingFallback)
+            {
+                MessageBox.Show(
+                    $"Mod '{modConfig.ModName}' został zainstalowany używając wersji Steam. " +
+                    "Jeśli wystąpią problemy, sprawdź czy dostępna jest dedykowana wersja Epic.",
+                    "Instalacja zakończona (Fallback)",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information);
+            }
+
             GC.Collect();
             GC.WaitForPendingFinalizers();
         }
+
 
         public async Task HandleEpicGameAsync(ModConfiguration modConfig)
         {
@@ -372,7 +452,7 @@ namespace SUSFuckr
         {
             try
             {
-                LogToFile($"Launching legendary.exe {commandArguments}");
+                UIOutput.Write($"Launching legendary.exe {commandArguments}");
                 var psi = new ProcessStartInfo
                 {
                     FileName = legendaryPath,
@@ -413,11 +493,11 @@ namespace SUSFuckr
 
                 var exitMsg = $"Process exited with code {process.ExitCode}";
                 LegendaryOutput?.Invoke(exitMsg);
-                LogToFile(exitMsg);
+                UIOutput.Write(exitMsg);
             }
             catch (Exception ex)
             {
-                LogToFile($"ERROR running legendary.exe {commandArguments}: {ex}");
+                UIOutput.Write($"ERROR running legendary.exe {commandArguments}: {ex}");
                 MessageBox.Show(
                     $"Wystąpił błąd podczas uruchamiania legendary.exe: {ex.Message}",
                     "Błąd",
@@ -425,6 +505,7 @@ namespace SUSFuckr
                     MessageBoxIcon.Error);
             }
         }
+
 
         private async Task DownloadLegendaryAsync()
         {

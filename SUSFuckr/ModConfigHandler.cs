@@ -231,7 +231,7 @@ namespace SUSFuckr
                 else if (comboBox.SelectedIndex >= 0)
                 {
                     var selectedItem = comboBox?.SelectedItem?.ToString();
-                    hash = selectedItem?.Split('-').Last().Trim(); // Wyciągnij tylko hash
+                    hash = selectedItem?.Split('-')?.LastOrDefault()?.Trim() ?? string.Empty; // Wyciągnij tylko hash
                 }
                 form.DialogResult = DialogResult.OK;
                 form.Close();
@@ -423,7 +423,8 @@ namespace SUSFuckr
 
             int baseHeight = 100; // Podstawowa wysokość (np. górna część okna)
             int itemHeight = 25; // Wysokość każdego zestawu Label i TextBox
-            int maxWindowHeight = Screen.PrimaryScreen.WorkingArea.Height - 100; // Maksymalna wysokość okna, np. 100 pixeli mniej niż wysokość ekranu 
+            int maxWindowHeight = (Screen.PrimaryScreen?.WorkingArea.Height ?? 800) - 100; // Maksymalna wysokość okna, np. 100 pixeli mniej niż wysokość ekranu 
+
 
             int calculatedHeight = baseHeight + (txtFiles.Length * itemHeight) + 60; // 70 pixeli to miejsce na przycisk Zapisz
             int finalWindowHeight = Math.Min(calculatedHeight, maxWindowHeight);  // Finalna wysokość ograniczona do maxWindowHeight

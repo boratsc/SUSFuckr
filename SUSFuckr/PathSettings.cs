@@ -8,9 +8,11 @@ namespace SUSFuckr
 	{
 		private static string _modsInstallPath = string.Empty;
 		private static readonly string _defaultModsPath;
-		private static readonly string _configFilePath = "appsettings.json";
+        private static readonly string _configFilePath = Path.Combine(
+			Path.GetDirectoryName(Environment.ProcessPath)!,
+			"appsettings.json");
 
-		static PathSettings()
+        static PathSettings()
 		{
 			var config = new ConfigurationBuilder()
 				.AddJsonFile(_configFilePath, optional: true, reloadOnChange: true)
@@ -40,31 +42,37 @@ namespace SUSFuckr
 
 		public static string DefaultModsPath => _defaultModsPath;
 
-		private static void SavePathToConfig()
-		{
-			try
-			{
-				var json = File.ReadAllText(_configFilePath);
-				dynamic jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json);
+        private static void SavePathToConfig()
+        {
+            try
+            {
+                var json = File.ReadAllText(_configFilePath);
+                var jsonObj = Newtonsoft.Json.JsonConvert.DeserializeObject(json) as Newtonsoft.Json.Linq.JObject;
 
-				if (jsonObj["AppSettings"] == null)
-				{
-					jsonObj["AppSettings"] = new Newtonsoft.Json.Linq.JObject();
-				}
+                if (jsonObj == null)
+                {
+                    jsonObj = new Newtonsoft.Json.Linq.JObject();
+                }
 
-				jsonObj["AppSettings"]["ModsInstallPath"] = _modsInstallPath;
+                if (jsonObj["AppSettings"] == null)
+                {
+                    jsonObj["AppSettings"] = new Newtonsoft.Json.Linq.JObject();
+                }
 
-				string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
-				File.WriteAllText(_configFilePath, output);
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"B³¹d podczas zapisywania œcie¿ki do konfiguracji: {ex.Message}");
-				// Mo¿na dodaæ logowanie b³êdu
-			}
-		}
+                jsonObj["AppSettings"]!["ModsInstallPath"] = _modsInstallPath;
 
-		public static void ResetToDefault()
+                string output = Newtonsoft.Json.JsonConvert.SerializeObject(jsonObj, Newtonsoft.Json.Formatting.Indented);
+                File.WriteAllText(_configFilePath, output);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"B³¹d podczas zapisywania œcie¿ki do konfiguracji: {ex.Message}");
+                // Mo¿na dodaæ logowanie b³êdu
+            }
+        }
+
+
+        public static void ResetToDefault()
 		{
 			ModsInstallPath = _defaultModsPath;
 		}

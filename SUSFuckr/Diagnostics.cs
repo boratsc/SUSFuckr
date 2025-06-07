@@ -1,4 +1,4 @@
-using System;
+Ôªøusing System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,7 +8,7 @@ namespace SUSFuckr
 {
     public static class Diagnostics
     {
-        // nazwy plikÛw, ktÛrych nie chcemy logowaÊ
+        // nazwy plik√≥w, kt√≥rych nie chcemy logowaƒá
         private static readonly HashSet<string> _excluded = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "Mini.RegionInstall.dll",
@@ -17,7 +17,7 @@ namespace SUSFuckr
             "touhats.catalog"
         };
 
-        public static void LogModsAndPlugins()
+        public static void LogModsAndPlugins(string? appVersion = null)
         {
             // 1) zainstalowane mody wg config.json
             var configs = ConfigManager.LoadConfig();
@@ -28,7 +28,7 @@ namespace SUSFuckr
             }
             UIOutput.Write(string.Empty);
 
-            // 2) ÑrÍczneî mody w folderze ModsInstallPath
+            // 2) ‚Äûrƒôczne‚Äù mody w folderze ModsInstallPath
             var modsRoot = PathSettings.ModsInstallPath
                            ?? PathSettings.DefaultModsPath;
 
@@ -37,7 +37,7 @@ namespace SUSFuckr
             {
                 foreach (var dir in Directory.EnumerateDirectories(modsRoot))
                 {
-                    // wyúwietlamy samπ nazwÍ katalogu
+                    // wy≈õwietlamy samƒÖ nazwƒô katalogu
                     UIOutput.Write(Path.GetFileName(dir));
                 }
             }
@@ -72,7 +72,13 @@ namespace SUSFuckr
                 }
             }
 
-            UIOutput.Write("=== Koniec diagnostyki ===");
+            UIOutput.Write("========================================");
+            UIOutput.Write($"         SUSFuckr {appVersion ?? ""}       ");
+            UIOutput.Write("========================================");
+            UIOutput.Write("      === Koniec diagnostyki ===      ");
+            UIOutput.Write("========================================");
+
+
         }
     }
 }

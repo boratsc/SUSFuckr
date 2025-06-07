@@ -16,10 +16,16 @@ namespace SUSFuckr
 
                 try
                 {
-                    // Usuniêcie zawartoœci poza plikami 'Saved Settings X.txt'
+                    // Usuniêcie zawartoœci poza plikami .txt i regionInfo.json
                     foreach (var filePath in Directory.GetFiles(targetDirectory))
                     {
-                        if (!Path.GetFileName(filePath).StartsWith("Saved Settings") || !filePath.EndsWith(".txt"))
+                        string fileName = Path.GetFileName(filePath);
+
+                        // Zachowaj wszystkie pliki .txt i regionInfo.json
+                        bool isTxtFile = fileName.EndsWith(".txt", StringComparison.OrdinalIgnoreCase);
+                        bool isRegionInfo = string.Equals(fileName, "regionInfo.json", StringComparison.OrdinalIgnoreCase);
+
+                        if (!isTxtFile && !isRegionInfo)
                         {
                             File.Delete(filePath);
                         }

@@ -13,23 +13,21 @@ namespace SUSFuckr
         public string ModName { get; set; } = string.Empty;
         public string PngFileName { get; set; } = string.Empty;
         public string InstallPath { get; set; } = string.Empty;
-        public string? GitHubRepoOrLink { get; set; } = string.Empty;
+        public string GitHubRepoOrLink { get; set; } = string.Empty;
+        public string EpicGitHubRepoOrLink { get; set; } = string.Empty; // Nowe pole
         public string ModType { get; set; } = string.Empty;
         public string? DllInstallPath { get; set; }
         public string ModVersion { get; set; } = string.Empty;
-        public DateTime? LastUpdated { get; set; } = DateTime.Now;
+        public DateTime? LastUpdated { get; set; }
         public string AmongVersion { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
     }
 
     public static class ConfigManager
     {
-        private static readonly string configFilePath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "config.json");
-        private static readonly string appSettingsFilePath = Path.Combine(
-            AppDomain.CurrentDomain.BaseDirectory,
-            "appsettings.json");
+        private static readonly string exeDir = Path.GetDirectoryName(Environment.ProcessPath)!;
+        private static readonly string configFilePath = Path.Combine(exeDir, "config.json");
+        private static readonly string appSettingsFilePath = Path.Combine(exeDir, "appsettings.json");
         private static readonly string configApiUrl = "https://susfuckr.boracik.pl/api/config";
 
         public static List<ModConfiguration> LoadConfig()
@@ -50,6 +48,10 @@ namespace SUSFuckr
             {
                 try
                 {
+                    // Dodaj token autoryzacji tak jak w UpdateConfigMenuItem_Click
+                    string downloadToken = SecretProvider.GetDownloadToken();
+                    httpClient.DefaultRequestHeaders.Add("Authorization", downloadToken);
+
                     var response = await httpClient.GetStringAsync(configApiUrl);
                     return JsonSerializer.Deserialize<List<ModConfiguration>>(response) ?? new List<ModConfiguration>();
                 }

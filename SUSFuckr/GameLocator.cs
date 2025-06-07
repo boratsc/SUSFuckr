@@ -98,14 +98,16 @@ namespace SUSFuckr
                 ModName = "AmongUs",
                 PngFileName = "Vanilla.png",
                 InstallPath = foundPath,
-                GitHubRepoOrLink = null,
+                GitHubRepoOrLink = string.Empty,
+                EpicGitHubRepoOrLink = string.Empty, // Dodaj to pole
                 ModType = "Vanilla",
                 DllInstallPath = null,
                 ModVersion = "",
-                LastUpdated = null,
+                LastUpdated = DateTime.Now,
                 AmongVersion = GetGameVersion(foundPath),
                 Description = $"Detected as {detectedMode}"
             };
+
 
             modConfigs.Add(vanillaMod);
             ConfigManager.SaveConfig(modConfigs);
