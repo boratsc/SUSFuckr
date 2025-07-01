@@ -1,4 +1,6 @@
-# SUSFuckr
+# SUSFuckr - niewspierany
+
+SUSFuckr to teraz SUSModder: https://github.com/boratsc/SUSModder
 
 **SUSFuckr** to narzędzie do zarządzania modyfikacjami gry *Among Us*, stworzone z myślą o prostocie, przejrzystości i łatwości użycia — nawet dla osób, które nigdy wcześniej nie instalowały modów.
 
